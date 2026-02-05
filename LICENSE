@@ -1,4 +1,15 @@
+SPDX-License-Identifier: MIT AND BSD-3-Clause
+
+This project contains code under two licenses:
+
+1. Original code by Alberto Cavalcante - MIT License
+2. Code derived from golang.org/x/tools - BSD-3-Clause License
+
+See NOTICE file for specific attribution and the full BSD-3-Clause text.
+
+================================================================================
 MIT License
+================================================================================
 
 Copyright (c) 2026 Alberto Cavalcante
 
@@ -19,3 +30,19 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+================================================================================
+BSD-3-Clause License (for derived code)
+================================================================================
+
+The BSD-3-Clause license text is included in the NOTICE file, which covers
+code derived from golang.org/x/tools/gopls. The following files contain
+derived code:
+
+- internal/model/model.go
+- internal/codegen/codegen.go
+
+Both licenses are permissive and compatible. When using this software:
+- You must retain both copyright notices
+- You must include both license texts in distributions
+- You may not use "Google LLC" or "The Go Authors" names for endorsement

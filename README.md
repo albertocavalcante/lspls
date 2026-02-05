@@ -3,7 +3,7 @@
 [![CI](https://github.com/albertocavalcante/lspls/actions/workflows/ci.yml/badge.svg)](https://github.com/albertocavalcante/lspls/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/albertocavalcante/lspls)](https://goreportcard.com/report/github.com/albertocavalcante/lspls)
 [![Go Reference](https://pkg.go.dev/badge/github.com/albertocavalcante/lspls.svg)](https://pkg.go.dev/github.com/albertocavalcante/lspls)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT AND BSD-3-Clause](https://img.shields.io/badge/License-MIT%20AND%20BSD--3--Clause-blue.svg)](LICENSE)
 
 > **L**SP **P**rotocol **L**anguage **S**ervices - Generate Go types from the LSP specification
 
@@ -210,4 +210,7 @@ Key files (pinned to the commit we based this on):
 
 ## License
 
-MIT - See [LICENSE](LICENSE)
+MIT AND BSD-3-Clause - See [LICENSE](LICENSE) and [NOTICE](NOTICE)
+
+- Original code: MIT
+- Code derived from golang.org/x/tools: BSD-3-Clause
