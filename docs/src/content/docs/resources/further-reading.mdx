@@ -1,0 +1,61 @@
+---
+title: Further Reading
+description: Resources for learning more about LSP and code generation
+---
+
+# Further Reading
+
+Resources for understanding LSP, code generation, and related projects.
+
+## gopls (Go Language Server) - Primary Reference
+
+The lspls code generation approach is inspired by gopls's internal generator.
+
+- [Gopls on by default in VS Code Go](https://go.dev/blog/gopls-vscode-go) - Why a single language server was needed (Jan 2021)
+- [Scaling gopls for the growing Go ecosystem](https://go.dev/blog/gopls-scalability) - Memory optimization deep dive, 75% reduction via on-disk indexes (Sep 2023)
+- [gopls Design Document](https://github.com/golang/tools/blob/master/gopls/doc/design/design.md) - Original 2018-2019 design with 2023 retrospective
+- [Protocol Generator README](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/README.md) - How gopls generates LSP types, type mapping challenges, history
+- [GopherCon 2019: "Go, pls stop breaking my editor"](https://www.youtube.com/watch?v=EFJfdWzBHwE) - Rebecca Stambler's keynote on why gopls was created
+
+## LSP Specification
+
+- [LSP 3.17 Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/) - Official human-readable documentation
+- [metaModel.json](https://github.com/microsoft/vscode-languageserver-node/blob/main/protocol/metaModel.json) - Machine-readable specification source
+- [vscode-languageserver-node](https://github.com/microsoft/vscode-languageserver-node) - Official LSP implementation
+
+## TypeScript-Go Port (Project Corsa)
+
+Microsoft's effort to port the TypeScript compiler to Go has interesting parallels to LSP type generation.
+
+- [A 10x Faster TypeScript](https://devblogs.microsoft.com/typescript/typescript-native-port/) - Official announcement by Anders Hejlsberg (March 2025)
+- [Progress on TypeScript 7 - December 2025](https://devblogs.microsoft.com/typescript/progress-on-typescript-7-december-2025/) - Status update with benchmarks
+- [A closer look at the details behind the Go port](https://2ality.com/2025/03/typescript-in-go.html) - Deep dive by Dr. Axel Rauschmayer
+- [Why Go?](https://github.com/microsoft/typescript-go/discussions/411) - Official GitHub discussion on language choice
+- [TypeScript is being ported to Go](https://www.youtube.com/watch?v=10qowKUW82U) - Interview with Anders Hejlsberg
+- [Anders Hejlsberg on TypeScript's Go Rewrite](https://www.youtube.com/watch?v=NrEW7F2WCNA) - Live interview by Matt Pocock
+- [TypeScript Just Got 10x Faster](https://syntax.fm/show/884/typescript-just-got-10x-faster) - Syntax podcast with Anders Hejlsberg & Daniel Rosenwasser
+- [TypeScript Origins: The Documentary](https://www.youtube.com/watch?v=U6s2pdxebSo) - 80 min documentary (OfferZen, 2023)
+
+## Related Go LSP Libraries
+
+| Library | Status | Notes |
+|---------|--------|-------|
+| [go.lsp.dev/protocol](https://github.com/go-language-server/protocol) | LSP 3.15.3 | Stuck since 2020 |
+| [gopls internal](https://github.com/golang/tools/tree/master/gopls/internal/protocol) | Current | Cannot be imported (`internal/`) |
+| [sourcegraph/go-lsp](https://github.com/sourcegraph/go-lsp) | Partial | Manually maintained subset |
+
+## TypeScript to Go Tools
+
+| Tool | Type | Notes |
+|------|------|-------|
+| [armsnyder/ts2go](https://github.com/armsnyder/ts2go) | Type definitions | Pre-v1.0, limited union support |
+| [quicktype](https://github.com/glideapps/quicktype) | Multi-language | General-purpose, may need post-processing |
+| [leona/ts2go](https://github.com/leona/ts2go) | Full transpiler | Experimental, limited subset |
+
+## Why Parse metaModel.json?
+
+All mature LSP type generators (gopls, microsoft/typescript-go, lspls) parse `metaModel.json` directly rather than converting TypeScript source:
+
+1. **Official source of truth** - Machine-readable, versioned, stable schema
+2. **Avoids TS complexity** - No need to handle generics, mapped types, conditional types
+3. **Full control** - Generate exactly the Go idioms you want

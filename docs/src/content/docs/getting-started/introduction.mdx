@@ -1,0 +1,48 @@
+---
+title: Introduction
+description: lspls - Generate Go types from the LSP specification
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+# lspls
+
+**lspls** (**L**SP **P**rotocol **L**anguage **S**ervices) generates Go structs, interfaces, and constants directly from the official [Language Server Protocol specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/).
+
+## The Problem
+
+The LSP specification is defined in TypeScript and published as `metaModel.json`. Many Go LSP implementations need these types, but existing options are limited:
+
+<CardGrid>
+  <Card title="go.lsp.dev/protocol" icon="warning">
+    Stuck on LSP 3.15.3 since 2020. Missing modern features like InlayHints.
+  </Card>
+  <Card title="gopls internal types" icon="warning">
+    Up-to-date but in `internal/` package - cannot be imported.
+  </Card>
+</CardGrid>
+
+## The Solution
+
+**lspls** generates types directly from the official specification:
+
+- Always up-to-date with the latest LSP version
+- Generate all types or only what you need
+- Automatic dependency resolution
+- Clean, idiomatic Go code
+
+## How It Works
+
+1. **Fetches** `metaModel.json` from [microsoft/vscode-languageserver-node](https://github.com/microsoft/vscode-languageserver-node)
+2. **Parses** the JSON specification into a typed model
+3. **Generates** Go code with proper type mappings:
+   - TypeScript interfaces to Go structs
+   - TypeScript unions (`A | B`) to union types with JSON marshaling
+   - TypeScript `T | null` to Go `*T` with `omitempty`
+   - Enumerations to Go `const` with typed values
+
+## Next Steps
+
+- [Installation](/lspls/getting-started/installation/) - Install lspls
+- [Quick Start](/lspls/getting-started/quick-start/) - Generate your first types
+- [CLI Reference](/lspls/reference/cli/) - All available options

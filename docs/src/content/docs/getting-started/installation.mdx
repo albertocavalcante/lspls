@@ -1,0 +1,47 @@
+---
+title: Installation
+description: How to install lspls
+---
+
+# Installation
+
+## Using Go Install
+
+The recommended way to install lspls:
+
+```bash
+go install github.com/albertocavalcante/lspls/cmd/lspls@latest
+```
+
+This will install the `lspls` binary to your `$GOPATH/bin` directory.
+
+## From Releases
+
+Download pre-built binaries from the [GitHub Releases](https://github.com/albertocavalcante/lspls/releases) page.
+
+Available platforms:
+- Linux (amd64, arm64)
+- macOS (amd64, arm64)
+- Windows (amd64)
+
+## From Source
+
+Clone and build from source:
+
+```bash
+git clone https://github.com/albertocavalcante/lspls
+cd lspls
+go build -o lspls ./cmd/lspls
+```
+
+## Verify Installation
+
+Verify the installation by checking the version:
+
+```bash
+lspls --version
+```
+
+## Next Steps
+
+- [Quick Start](/lspls/getting-started/quick-start/) - Generate your first types

@@ -1,0 +1,73 @@
+---
+title: LSP Versions
+description: Supported Language Server Protocol versions
+---
+
+# LSP Versions
+
+lspls can generate types from any LSP specification version.
+
+## Supported Versions
+
+| Version | Git Ref | Status |
+|---------|---------|--------|
+| 3.17.x | `release/protocol/3.17.6-next.14` | Default |
+| 3.18.x | `release/protocol/3.18.0` | Supported |
+
+## Using Specific Versions
+
+### Default (3.17)
+
+```bash
+lspls -o ./protocol/
+```
+
+### LSP 3.18
+
+```bash
+lspls -v release/protocol/3.18.0 -o ./protocol/
+```
+
+### With Proposed Features
+
+Include unstable features that may change:
+
+```bash
+lspls -v release/protocol/3.18.0 --proposed -o ./protocol/
+```
+
+## Finding Available Versions
+
+Available versions are git refs in the [vscode-languageserver-node](https://github.com/microsoft/vscode-languageserver-node) repository.
+
+List protocol release tags:
+
+```bash
+git ls-remote --tags https://github.com/microsoft/vscode-languageserver-node | grep protocol
+```
+
+## Version Differences
+
+Each LSP version adds new capabilities:
+
+### LSP 3.17 Highlights
+- InlayHint support
+- Type hierarchy
+- Notebook document support
+- Diagnostic pull model
+
+### LSP 3.18 Highlights
+- Inline completion
+- Additional diagnostic properties
+
+## Proposed Features
+
+Features marked as "proposed" in the specification are excluded by default. These are experimental features that may change before becoming stable.
+
+To include proposed features:
+
+```bash
+lspls --proposed -o ./protocol/
+```
+
+Use with caution - proposed APIs may change or be removed in future versions.

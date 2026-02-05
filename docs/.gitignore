@@ -1,0 +1,13 @@
+# Build output
+dist/
+
+# Dependencies
+node_modules/
+
+# Astro
+.astro/
+
+# Lock files - using bun
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

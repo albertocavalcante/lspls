@@ -1,0 +1,104 @@
+---
+title: CLI Reference
+description: Complete reference for all lspls command-line options
+---
+
+# CLI Reference
+
+Complete reference for the `lspls` command-line interface.
+
+## Synopsis
+
+```bash
+lspls [flags]
+```
+
+## Flags
+
+### Output Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-o <path>` | Output directory or file | stdout |
+| `-p <name>` | Go package name | `protocol` |
+| `--dry-run` | Print to stdout without writing files | false |
+
+### Spec Source Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-v <ref>` | LSP version or git ref | `release/protocol/3.17.6-next.14` |
+| `--spec <path>` | Path to local metaModel.json | - |
+| `--repo <path>` | Path to local vscode-languageserver-node clone | - |
+
+### Type Selection
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-t <types>` | Comma-separated types to generate | all |
+| `--proposed` | Include proposed/unstable features | false |
+
+### Other Options
+
+| Flag | Description |
+|------|-------------|
+| `--verbose` | Verbose output |
+| `--version` | Show version information |
+| `--help` | Show help |
+
+## Examples
+
+### Generate All Types
+
+```bash
+lspls -o ./protocol/
+```
+
+### Generate Specific Types
+
+```bash
+lspls -t InlayHint,InlayHintKind,Position,Range -o ./types.go
+```
+
+### Use Specific Version
+
+```bash
+lspls -v release/protocol/3.18.0 -o ./protocol/
+```
+
+### Include Proposed Features
+
+```bash
+lspls --proposed -o ./protocol/
+```
+
+### Custom Package Name
+
+```bash
+lspls -p lsp -o ./lsp/
+```
+
+### Preview Output
+
+```bash
+lspls --dry-run | head -100
+```
+
+### Use Local Spec File
+
+```bash
+lspls --spec ./metaModel.json -o ./protocol/
+```
+
+### Verbose Output
+
+```bash
+lspls --verbose -o ./protocol/
+```
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Error (invalid arguments, fetch failed, generation failed, etc.) |
