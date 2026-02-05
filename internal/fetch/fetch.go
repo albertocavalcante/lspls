@@ -8,6 +8,7 @@
 package fetch
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -154,9 +155,10 @@ func fetchFromGit(ctx context.Context, opts Options) (*Result, error) {
 		VSCodeRepo,
 		tmpDir,
 	)
-	cmd.Stderr = io.Discard
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("git clone: %w", err)
+		return nil, fmt.Errorf("git clone %s: %w (stderr: %s)", VSCodeRepo, err, strings.TrimSpace(stderr.String()))
 	}
 
 	// Sparse checkout just the protocol directory
@@ -205,7 +207,7 @@ func injectLineNumbers(data []byte) []byte {
 	var result []byte
 	lineNum := 1
 
-	for i := 0; i < len(data); i++ {
+	for i := range len(data) {
 		result = append(result, data[i])
 		switch data[i] {
 		case '{':

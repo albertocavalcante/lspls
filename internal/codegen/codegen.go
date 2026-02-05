@@ -14,9 +14,10 @@ package codegen
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"go/format"
-	"sort"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -97,6 +98,9 @@ type Generator struct {
 	// orTypes tracks generated Or_* union types to avoid duplicates.
 	// Key is the type name (e.g., "Or_TextEdit_AnnotatedTextEdit"), value is the type definition.
 	orTypes *orderedMap[orTypeInfo]
+
+	// proposedTypes caches whether a type is proposed for O(1) lookup.
+	proposedTypes map[string]bool
 }
 
 // orTypeInfo holds information about a generated Or_* type.
@@ -108,11 +112,12 @@ type orTypeInfo struct {
 // New creates a new Generator.
 func New(m *model.Model, cfg Config) *Generator {
 	g := &Generator{
-		model:   m,
-		config:  cfg,
-		types:   newOrderedMap[string](),
-		consts:  newOrderedMap[string](),
-		orTypes: newOrderedMap[orTypeInfo](),
+		model:         m,
+		config:        cfg,
+		types:         newOrderedMap[string](),
+		consts:        newOrderedMap[string](),
+		orTypes:       newOrderedMap[orTypeInfo](),
+		proposedTypes: buildProposedCache(m),
 	}
 
 	if len(cfg.Types) > 0 {
@@ -123,6 +128,21 @@ func New(m *model.Model, cfg Config) *Generator {
 	}
 
 	return g
+}
+
+// buildProposedCache builds a cache of proposed type names for O(1) lookup.
+func buildProposedCache(m *model.Model) map[string]bool {
+	cache := make(map[string]bool)
+	for _, s := range m.Structures {
+		cache[s.Name] = s.Proposed
+	}
+	for _, e := range m.Enumerations {
+		cache[e.Name] = e.Proposed
+	}
+	for _, a := range m.TypeAliases {
+		cache[a.Name] = a.Proposed
+	}
+	return cache
 }
 
 // Generate produces all output files.
@@ -178,22 +198,7 @@ func (g *Generator) shouldInclude(name string, proposed bool) bool {
 
 // isProposed returns true if the type with the given name is proposed.
 func (g *Generator) isProposed(name string) bool {
-	for _, s := range g.model.Structures {
-		if s.Name == name {
-			return s.Proposed
-		}
-	}
-	for _, e := range g.model.Enumerations {
-		if e.Name == name {
-			return e.Proposed
-		}
-	}
-	for _, a := range g.model.TypeAliases {
-		if a.Name == name {
-			return a.Proposed
-		}
-	}
-	return false
+	return g.proposedTypes[name]
 }
 
 func (g *Generator) generateStructure(s *model.Structure) {
@@ -236,8 +241,7 @@ func (g *Generator) generateStructure(s *model.Structure) {
 func (g *Generator) generateProperty(buf *bytes.Buffer, p *model.Property) {
 	// Doc comment for property
 	if p.Documentation != "" {
-		lines := strings.Split(p.Documentation, "\n")
-		for _, line := range lines {
+		for line := range strings.SplitSeq(p.Documentation, "\n") {
 			fmt.Fprintf(buf, "\t// %s\n", line)
 		}
 	}
@@ -362,7 +366,7 @@ func (g *Generator) fileHeader() string {
 }
 
 // goType converts an LSP type to its Go equivalent.
-func (g *Generator) goType(t *model.Type, optional bool) string {
+func (g *Generator) goType(t *model.Type, _ bool) string {
 	if t == nil {
 		return "any"
 	}
@@ -526,8 +530,8 @@ func (g *Generator) getOrType(t *model.Type) string {
 	}
 
 	// Sort by identifier-safe name (for deterministic Or_* type names)
-	sort.Slice(pairs, func(i, j int) bool {
-		return pairs[i].identName < pairs[j].identName
+	slices.SortFunc(pairs, func(a, b namePair) int {
+		return cmp.Compare(a.identName, b.identName)
 	})
 
 	// Extract sorted names
@@ -619,8 +623,7 @@ func exportName(name string) string {
 }
 
 func writeDocComment(buf *bytes.Buffer, doc string) {
-	lines := strings.Split(doc, "\n")
-	for _, line := range lines {
+	for line := range strings.SplitSeq(doc, "\n") {
 		fmt.Fprintf(buf, "// %s\n", line)
 	}
 }
@@ -752,8 +755,7 @@ func (m *orderedMap[T]) get(key string) T {
 
 func (m *orderedMap[T]) keys() []string {
 	// Sort for deterministic output
-	sorted := make([]string, len(m.order))
-	copy(sorted, m.order)
-	sort.Strings(sorted)
+	sorted := slices.Clone(m.order)
+	slices.Sort(sorted)
 	return sorted
 }

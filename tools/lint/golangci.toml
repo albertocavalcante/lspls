@@ -14,6 +14,17 @@ modules-download-mode = "readonly"
 # Use standard preset which includes most common linters
 default = "standard"
 
+# Enable additional linters for idiomatic Go code
+enable = [
+  "gocritic",      # Opinionated linter with many good checks
+  "unconvert",     # Remove unnecessary type conversions
+  "prealloc",      # Suggest slice preallocation
+  "nolintlint",    # Ensure //nolint comments are properly used
+  "whitespace",    # Leading/trailing whitespace
+  "gofumpt",       # Stricter gofmt
+  "revive",        # Replacement for golint
+]
+
 [linters.settings.errcheck]
 check-type-assertions = false
 check-blank = false
@@ -25,6 +36,41 @@ disable = ["shadow", "fieldalignment"]
 [linters.settings.staticcheck]
 checks = ["all", "-ST1023", "-S1009", "-QF*"]
 
+[linters.settings.gocritic]
+enabled-tags = ["diagnostic", "style", "opinionated"]
+disabled-checks = [
+  "hugeParam",           # Too noisy for structs
+  "rangeValCopy",        # Often acceptable
+  "paramTypeCombine",    # Style preference
+]
+
+[linters.settings.gofumpt]
+extra-rules = true
+
+[linters.settings.revive]
+severity = "warning"
+rules = [
+  { name = "blank-imports" },
+  { name = "context-as-argument" },
+  { name = "context-keys-type" },
+  { name = "dot-imports" },
+  { name = "error-return" },
+  { name = "error-strings" },
+  { name = "error-naming" },
+  { name = "exported" },
+  { name = "increment-decrement" },
+  { name = "var-naming" },
+  { name = "package-comments" },
+  { name = "range" },
+  { name = "receiver-naming" },
+  { name = "time-naming" },
+  { name = "indent-error-flow" },
+  { name = "errorf" },
+  { name = "empty-block" },
+  { name = "superfluous-else" },
+  { name = "unreachable-code" },
+]
+
 [linters.exclusions]
 presets = [
   "comments",
@@ -34,7 +80,7 @@ presets = [
 
 [[linters.exclusions.rules]]
 path = "_test\\.go"
-linters = ["funlen", "unused"]
+linters = ["funlen", "unused", "gocritic"]
 
 [[linters.exclusions.rules]]
 path = "testdata"
