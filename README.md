@@ -186,15 +186,17 @@ Contributions welcome! Please:
 
 ### gopls Protocol Generator
 
-This tool is inspired by gopls's internal generator. Key files to reference:
+This tool is derived from gopls's internal generator at commit [`7b3ed75de`](https://github.com/golang/tools/tree/7b3ed75de0778c292b3f55c661cce98ce6028f94/gopls/internal/protocol/generate) (v0.41.0+35, 2026-02-03).
+
+Key files (pinned to the commit we based this on):
 
 | File | Source | GitHub Mirror | Purpose |
 |------|--------|---------------|---------|
-| main.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/master:gopls/internal/protocol/generate/main.go) | [github](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/main.go) | Entry point, orchestration |
-| types.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/master:gopls/internal/protocol/generate/types.go) | [github](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/types.go) | Model structs for metaModel.json |
-| output.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/master:gopls/internal/protocol/generate/output.go) | [github](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/output.go) | **Code generation** - union types, JSON marshaling |
-| typenames.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/master:gopls/internal/protocol/generate/typenames.go) | [github](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/typenames.go) | Anonymous type naming |
-| README.md | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/master:gopls/internal/protocol/generate/README.md) | [github](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/README.md) | Excellent documentation |
+| main.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/7b3ed75de0778c292b3f55c661cce98ce6028f94:gopls/internal/protocol/generate/main.go) | [github](https://github.com/golang/tools/blob/7b3ed75de0778c292b3f55c661cce98ce6028f94/gopls/internal/protocol/generate/main.go) | Entry point, orchestration |
+| types.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/7b3ed75de0778c292b3f55c661cce98ce6028f94:gopls/internal/protocol/generate/types.go) | [github](https://github.com/golang/tools/blob/7b3ed75de0778c292b3f55c661cce98ce6028f94/gopls/internal/protocol/generate/types.go) | Model structs for metaModel.json |
+| output.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/7b3ed75de0778c292b3f55c661cce98ce6028f94:gopls/internal/protocol/generate/output.go) | [github](https://github.com/golang/tools/blob/7b3ed75de0778c292b3f55c661cce98ce6028f94/gopls/internal/protocol/generate/output.go) | **Code generation** - union types, JSON marshaling |
+| typenames.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/7b3ed75de0778c292b3f55c661cce98ce6028f94:gopls/internal/protocol/generate/typenames.go) | [github](https://github.com/golang/tools/blob/7b3ed75de0778c292b3f55c661cce98ce6028f94/gopls/internal/protocol/generate/typenames.go) | Anonymous type naming |
+| README.md | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/7b3ed75de0778c292b3f55c661cce98ce6028f94:gopls/internal/protocol/generate/README.md) | [github](https://github.com/golang/tools/blob/7b3ed75de0778c292b3f55c661cce98ce6028f94/gopls/internal/protocol/generate/README.md) | Excellent documentation |
 
 ### LSP Specification
 
