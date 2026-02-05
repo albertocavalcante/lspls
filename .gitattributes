@@ -1,0 +1,55 @@
+# Git attributes for lspls
+# https://git-scm.com/docs/gitattributes
+
+# ============================================================================
+# Export behavior (git archive)
+# ============================================================================
+# Files excluded from release tarballs - not needed by library consumers
+
+.github/             export-ignore
+.gitattributes       export-ignore
+.gitignore           export-ignore
+lefthook.yml         export-ignore
+justfile             export-ignore
+tools/               export-ignore
+
+# Test data excluded from archives (tests themselves kept for reference)
+internal/codegen/testdata/  export-ignore
+e2e/testdata/               export-ignore
+
+# ============================================================================
+# Language statistics (GitHub linguist)
+# ============================================================================
+# Ensure Go is properly detected, exclude test fixtures from stats
+
+*.go linguist-language=Go
+*.txtar linguist-detectable=false
+
+# ============================================================================
+# Line endings
+# ============================================================================
+# Normalize line endings for cross-platform consistency
+
+* text=auto
+
+*.go text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txtar text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.gif binary
+
+# ============================================================================
+# Diff behavior
+# ============================================================================
+# Use Go-aware diff for better code review
+
+*.go diff=golang

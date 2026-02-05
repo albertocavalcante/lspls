@@ -5,66 +5,146 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+env:
+  GO_VERSION: "1.23"
+
 jobs:
+  # ===========================================================================
+  # Job 1: Build & Test
+  # ===========================================================================
   test:
     name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+    steps:
+      # actions/checkout v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          go-version: "1.23"
+          fetch-depth: 1
+          persist-credentials: false
+
+      # actions/setup-go v5
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: go.sum
 
       - name: Verify dependencies
         run: go mod verify
+
+      - name: Verify go.mod is tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum || (echo "go.mod/go.sum not tidy" && exit 1)
 
       - name: Build
         run: go build -v ./...
 
       - name: Test
-        run: go test -v -race -coverprofile=coverage.out ./...
+        run: go test -v -race -timeout 10m ./...
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: coverage.out
-          fail_ci_if_error: false
-
+  # ===========================================================================
+  # Job 2: Lint
+  # ===========================================================================
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      # actions/checkout v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          go-version: "1.23"
-          cache: true
+          fetch-depth: 1
+          persist-credentials: false
 
+      # actions/setup-go v5
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.sum
+
+      # golangci/golangci-lint-action v6
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84
         with:
           version: latest
+          args: --config=tools/lint/golangci.toml --timeout=5m
 
+  # ===========================================================================
+  # Job 3: Format Check
+  # ===========================================================================
+  format:
+    name: Format Check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      # actions/checkout v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # actions/setup-go v5
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Check Go formatting
+        run: |
+          unformatted=$(gofmt -l $(find . -name '*.go'))
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not formatted:"
+            echo "$unformatted"
+            echo ""
+            echo "Run 'gofmt -w .' or 'just format' to fix"
+            exit 1
+          fi
+          echo "All Go files are properly formatted"
+
+  # ===========================================================================
+  # Job 4: Smoke Test (CLI functionality)
+  # ===========================================================================
   smoke:
     name: Smoke Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+    steps:
+      # actions/checkout v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          go-version: "1.23"
+          fetch-depth: 1
+          persist-credentials: false
+
+      # actions/setup-go v5
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: go.sum
 
       - name: Build
         run: go build -o lspls ./cmd/lspls

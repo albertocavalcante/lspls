@@ -1,0 +1,45 @@
+# golangci-lint configuration (v2)
+# https://golangci-lint.run/usage/configuration/
+#
+# Run: golangci-lint run --config=tools/lint/golangci.toml
+# Or:  just lint
+
+version = "2"
+
+[run]
+timeout = "5m"
+modules-download-mode = "readonly"
+
+[linters]
+# Use standard preset which includes most common linters
+default = "standard"
+
+[linters.settings.errcheck]
+check-type-assertions = false
+check-blank = false
+
+[linters.settings.govet]
+enable-all = true
+disable = ["shadow", "fieldalignment"]
+
+[linters.settings.staticcheck]
+checks = ["all", "-ST1023", "-S1009", "-QF*"]
+
+[linters.exclusions]
+presets = [
+  "comments",
+  "std-error-handling",
+  "common-false-positives",
+]
+
+[[linters.exclusions.rules]]
+path = "_test\\.go"
+linters = ["funlen", "unused"]
+
+[[linters.exclusions.rules]]
+path = "testdata"
+linters = ["all"]
+
+[issues]
+max-issues-per-linter = 50
+max-same-issues = 10
