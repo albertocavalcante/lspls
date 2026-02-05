@@ -140,22 +140,53 @@ jobs:
       - name: Build
         run: go build -o lspls ./cmd/lspls
 
-      - name: Generate types (dry run)
-        run: ./lspls --dry-run --verbose
+      - name: Test --version flag
+        run: ./lspls --version
 
-      - name: Generate specific types
-        run: ./lspls -t InlayHint,InlayHintKind,Position,Range --dry-run
+      - name: Test --help flag
+        run: ./lspls --help
 
-      - name: Generate to file (with transitive deps)
+      - name: Test dry run (fetches spec)
+        run: ./lspls --dry-run --verbose 2>&1 | head -50
+
+      - name: Test type filtering
+        run: ./lspls -t Position,Range --dry-run | grep -q "type Position struct"
+
+      - name: Test custom package name
+        run: ./lspls -t Position -p myproto --dry-run | grep -q "package myproto"
+
+      # Test that transitive deps are resolved by default
+      - name: Generate with transitive deps (default)
         run: |
-          mkdir -p /tmp/protocol
-          ./lspls -t InlayHint,Diagnostic -o /tmp/protocol/ --verbose
-          ls -la /tmp/protocol/
-          head -100 /tmp/protocol/protocol.go
+          mkdir -p /tmp/protocol-deps
+          ./lspls -t InlayHint -o /tmp/protocol-deps/ --verbose
+          echo "=== Generated types (should include Position, InlayHintKind, etc.) ==="
+          grep "^type " /tmp/protocol-deps/protocol.go || true
 
-      - name: Verify generated code compiles
+      - name: Verify transitive deps code compiles
         run: |
-          cd /tmp/protocol
+          cd /tmp/protocol-deps
           go mod init testprotocol
           go mod tidy
           go build .
+          echo "SUCCESS: Code with transitive deps compiles"
+
+      # Test that --resolve-deps=false produces incomplete (non-compiling) code
+      - name: Generate WITHOUT transitive deps
+        run: |
+          mkdir -p /tmp/protocol-no-deps
+          ./lspls -t InlayHint --resolve-deps=false -o /tmp/protocol-no-deps/ --verbose
+          echo "=== Generated types (should ONLY include InlayHint) ==="
+          grep "^type " /tmp/protocol-no-deps/protocol.go || true
+
+      - name: Verify --resolve-deps=false produces non-compiling code (expected)
+        run: |
+          cd /tmp/protocol-no-deps
+          go mod init testprotocol
+          go mod tidy
+          if go build . 2>&1; then
+            echo "ERROR: Code should NOT compile without transitive deps"
+            exit 1
+          else
+            echo "SUCCESS: Code correctly fails to compile without transitive deps (undefined: Position, etc.)"
+          fi
