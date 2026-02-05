@@ -1,3 +1,12 @@
+// Copyright 2026 Alberto Cavalcante. All rights reserved.
+// Use of this source code is governed by a MIT-style license
+// that can be found in the LICENSE file.
+//
+// Portions of this code are derived from golang.org/x/tools/gopls:
+// https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/types.go
+// Copyright 2022 The Go Authors. All rights reserved.
+// See NOTICE file for the full license text.
+
 // Package model defines the data structures for parsing the LSP metaModel.json specification.
 //
 // The LSP specification is published as a JSON file (metaModel.json) that describes

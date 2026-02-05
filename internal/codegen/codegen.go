@@ -1,3 +1,12 @@
+// Copyright 2026 Alberto Cavalcante. All rights reserved.
+// Use of this source code is governed by a MIT-style license
+// that can be found in the LICENSE file.
+//
+// Code generation logic inspired by golang.org/x/tools/gopls:
+// https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/output.go
+// Copyright 2022 The Go Authors. All rights reserved.
+// See NOTICE file for the full license text.
+
 // Package codegen generates Go source code from the LSP specification model.
 package codegen
 
