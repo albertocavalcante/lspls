@@ -274,7 +274,20 @@ All mature LSP type generators (gopls, microsoft/typescript-go, lspls) parse `me
 
 ### Further Reading
 
-**Microsoft TypeScript-Go Port (Project Corsa):**
+**gopls (Go Language Server) - Primary Reference:**
+
+- 📝 [Gopls on by default in VS Code Go](https://go.dev/blog/gopls-vscode-go) - Why a single language server was needed (Jan 2021)
+- 📝 [Scaling gopls for the growing Go ecosystem](https://go.dev/blog/gopls-scalability) - Memory optimization deep dive, 75% reduction via on-disk indexes (Sep 2023)
+- 📝 [gopls Design Document](https://github.com/golang/tools/blob/master/gopls/doc/design/design.md) - Original 2018-2019 design with 2023 retrospective by Rob Findley
+- 📝 [Protocol Generator README](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/README.md) - How gopls generates LSP types from metaModel.json, type mapping challenges, history
+- 🎥 [GopherCon 2019: "Go, pls stop breaking my editor"](https://www.youtube.com/watch?v=EFJfdWzBHwE) - Rebecca Stambler's keynote on why gopls was created (tool fragmentation, 24+ CLI tools in VS Code)
+
+**LSP Specification:**
+
+- 📝 [LSP 3.17 Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/) - Official human-readable docs
+- 📝 [metaModel.json](https://github.com/microsoft/vscode-languageserver-node/blob/main/protocol/metaModel.json) - Machine-readable spec source
+
+**TypeScript-Go Port (Project Corsa):**
 
 - 📝 [A 10x Faster TypeScript](https://devblogs.microsoft.com/typescript/typescript-native-port/) - Official announcement by Anders Hejlsberg (March 2025)
 - 📝 [Progress on TypeScript 7 - December 2025](https://devblogs.microsoft.com/typescript/progress-on-typescript-7-december-2025/) - Status update with benchmarks
@@ -283,15 +296,7 @@ All mature LSP type generators (gopls, microsoft/typescript-go, lspls) parse `me
 - 🎥 [TypeScript is being ported to Go](https://www.youtube.com/watch?v=10qowKUW82U) - Interview with Anders Hejlsberg (Michigan TypeScript)
 - 🎥 [Anders Hejlsberg on TypeScript's Go Rewrite](https://www.youtube.com/watch?v=NrEW7F2WCNA) - Live interview by Matt Pocock
 - 🎧 [TypeScript Just Got 10× Faster](https://syntax.fm/show/884/typescript-just-got-10x-faster) - Syntax podcast with Anders Hejlsberg & Daniel Rosenwasser
-
-**TypeScript History:**
-
-- 🎥 [TypeScript Origins: The Documentary](https://www.youtube.com/watch?v=U6s2pdxebSo) - 80 min documentary featuring Anders Hejlsberg, core team, and community (OfferZen, 2023)
-
-**LSP Specification:**
-
-- 📝 [LSP 3.17 Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/) - Official human-readable docs
-- 📝 [metaModel.json](https://github.com/microsoft/vscode-languageserver-node/blob/main/protocol/metaModel.json) - Machine-readable spec source
+- 🎥 [TypeScript Origins: The Documentary](https://www.youtube.com/watch?v=U6s2pdxebSo) - 80 min documentary (OfferZen, 2023)
 
 ## License
 
