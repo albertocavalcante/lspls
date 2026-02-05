@@ -442,6 +442,45 @@ func (g *Generator) goBaseType(t *model.Type) string {
 	}
 }
 
+// typeNameForIdent returns a Go-identifier-safe name for a type.
+// This is used when building Or_* type names where []Location or map[K]V
+// would be invalid in an identifier.
+func (g *Generator) typeNameForIdent(t *model.Type) string {
+	if t == nil {
+		return "any"
+	}
+
+	switch t.Kind {
+	case "base":
+		// Base types are already safe identifiers (int32, string, etc.)
+		return g.goBaseType(t)
+	case "reference":
+		return exportName(t.Name)
+	case "array":
+		return "Arr" + g.typeNameForIdent(t.Element)
+	case "map":
+		keyName := g.typeNameForIdent(t.Key)
+		valName := "any"
+		if vt, ok := t.Value.(*model.Type); ok {
+			valName = g.typeNameForIdent(vt)
+		}
+		return "Map" + keyName + valName
+	case "literal":
+		return "Literal"
+	case "stringLiteral":
+		return "string"
+	case "or":
+		// Nested unions are rare, but handle them
+		return "Union"
+	case "and":
+		return "Intersection"
+	case "tuple":
+		return "Tuple"
+	default:
+		return "any"
+	}
+}
+
 // getOrType returns the Go type name for an "or" union type, registering it
 // for generation if not already done. Returns "any" for empty or single-item unions.
 func (g *Generator) getOrType(t *model.Type) string {
@@ -473,15 +512,34 @@ func (g *Generator) getOrType(t *model.Type) string {
 		return "any"
 	}
 
-	// Get sorted Go type names for all items
-	var itemNames []string
-	for _, item := range nonNullItems {
-		itemNames = append(itemNames, g.goType(item, false))
+	// Build pairs of (identName, goType) for each item so we can sort together
+	type namePair struct {
+		identName string
+		goType    string
 	}
-	sort.Strings(itemNames)
+	var pairs []namePair
+	for _, item := range nonNullItems {
+		pairs = append(pairs, namePair{
+			identName: g.typeNameForIdent(item),
+			goType:    g.goType(item, false),
+		})
+	}
 
-	// Generate the type name: Or_Type1_Type2_...
-	typeName := "Or_" + strings.Join(itemNames, "_")
+	// Sort by identifier-safe name (for deterministic Or_* type names)
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].identName < pairs[j].identName
+	})
+
+	// Extract sorted names
+	var identNames []string
+	var itemNames []string
+	for _, p := range pairs {
+		identNames = append(identNames, p.identName)
+		itemNames = append(itemNames, p.goType)
+	}
+
+	// Generate the type name: Or_Type1_Type2_... (using identifier-safe names)
+	typeName := "Or_" + strings.Join(identNames, "_")
 
 	// Check if we've already registered this type
 	if _, exists := g.orTypes.m[typeName]; !exists {
