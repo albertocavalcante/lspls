@@ -146,12 +146,12 @@ jobs:
       - name: Generate specific types
         run: ./lspls -t InlayHint,InlayHintKind,Position,Range --dry-run
 
-      - name: Generate to file (self-contained types)
+      - name: Generate to file (with transitive deps)
         run: |
           mkdir -p /tmp/protocol
-          ./lspls -t Position,Range,InlayHintKind,DiagnosticSeverity,TextDocumentSyncKind -o /tmp/protocol/ --verbose
+          ./lspls -t InlayHint,Diagnostic -o /tmp/protocol/ --verbose
           ls -la /tmp/protocol/
-          head -80 /tmp/protocol/protocol.go
+          head -100 /tmp/protocol/protocol.go
 
       - name: Verify generated code compiles
         run: |
