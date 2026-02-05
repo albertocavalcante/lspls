@@ -188,13 +188,13 @@ Contributions welcome! Please:
 
 This tool is inspired by gopls's internal generator. Key files to reference:
 
-| File | Purpose |
-|------|---------|
-| [main.go](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/main.go) | Entry point, orchestration |
-| [types.go](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/types.go) | Model structs for metaModel.json |
-| [output.go](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/output.go) | **Code generation** - union type handling, JSON marshaling |
-| [typenames.go](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/typenames.go) | Anonymous type naming |
-| [README.md](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/README.md) | Excellent documentation |
+| File | Source | GitHub Mirror | Purpose |
+|------|--------|---------------|---------|
+| main.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/master:gopls/internal/protocol/generate/main.go) | [github](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/main.go) | Entry point, orchestration |
+| types.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/master:gopls/internal/protocol/generate/types.go) | [github](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/types.go) | Model structs for metaModel.json |
+| output.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/master:gopls/internal/protocol/generate/output.go) | [github](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/output.go) | **Code generation** - union types, JSON marshaling |
+| typenames.go | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/master:gopls/internal/protocol/generate/typenames.go) | [github](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/typenames.go) | Anonymous type naming |
+| README.md | [cs.opensource.google](https://cs.opensource.google/go/x/tools/+/master:gopls/internal/protocol/generate/README.md) | [github](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/README.md) | Excellent documentation |
 
 ### LSP Specification
 
