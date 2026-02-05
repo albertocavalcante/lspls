@@ -31,7 +31,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      # actions/setup-go v5
+      # actions/setup-go v5.6.0
       - name: Setup Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
@@ -70,7 +70,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      # actions/setup-go v5
+      # actions/setup-go v5.6.0
       - name: Setup Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
@@ -78,11 +78,11 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      # golangci/golangci-lint-action v6
+      # golangci/golangci-lint-action v9.2.0
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20
         with:
-          version: latest
+          version: v2.8.0
           args: --config=tools/lint/golangci.toml --timeout=5m
 
   # ===========================================================================
@@ -102,7 +102,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      # actions/setup-go v5
+      # actions/setup-go v5.6.0
       - name: Setup Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
@@ -138,7 +138,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      # actions/setup-go v5
+      # actions/setup-go v5.6.0
       - name: Setup Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
