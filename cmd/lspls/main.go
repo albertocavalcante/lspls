@@ -61,6 +61,7 @@ func run() error {
 	specPath := flag.String("spec", "", "Path to local metaModel.json")
 	repoDir := flag.String("repo", "", "Path to local vscode-languageserver-node clone")
 	proposed := flag.Bool("proposed", false, "Include proposed/unstable features")
+	resolveDeps := flag.Bool("resolve-deps", true, "Include transitive type dependencies")
 	dryRun := flag.Bool("dry-run", false, "Print to stdout without writing files")
 	verbose := flag.Bool("verbose", false, "Verbose output")
 
@@ -80,6 +81,7 @@ Flags:
   --spec string    Path to local metaModel.json
   --repo string    Path to local vscode-languageserver-node clone
   --proposed       Include proposed/unstable features
+  --resolve-deps   Include transitive type dependencies (default: true)
   --dry-run        Print to stdout without writing files
   --verbose        Verbose output
   --version        Show version information
@@ -150,6 +152,7 @@ Examples:
 	// Configure code generation
 	cfg := codegen.Config{
 		PackageName:     *packageName,
+		ResolveDeps:     *resolveDeps,
 		IncludeProposed: *proposed,
 		GenerateClient:  true,
 		GenerateServer:  true,

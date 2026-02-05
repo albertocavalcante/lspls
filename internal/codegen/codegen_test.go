@@ -80,6 +80,7 @@ func runCodegen(input []byte, flags []string) (map[string][]byte, error) {
 	// Configure code generation
 	cfg := codegen.Config{
 		PackageName:     "protocol",
+		ResolveDeps:     true, // Default to true to match CLI behavior
 		IncludeProposed: containsFlag(flags, "proposed"),
 	}
 
@@ -91,6 +92,9 @@ func runCodegen(input []byte, flags []string) (map[string][]byte, error) {
 		}
 		if strings.HasPrefix(f, "package=") {
 			cfg.PackageName = strings.TrimPrefix(f, "package=")
+		}
+		if f == "no-resolve-deps" {
+			cfg.ResolveDeps = false
 		}
 	}
 
