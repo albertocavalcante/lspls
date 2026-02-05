@@ -11,11 +11,16 @@ Generate Go structs, interfaces, and constants directly from the official [Langu
 
 ## Why?
 
-The LSP specification is defined in TypeScript and published as `metaModel.json`. Many Go LSP implementations need these types, but existing packages like `go.lsp.dev/protocol` lag behind the spec (still on LSP 3.15.3 while 3.17+ has features like InlayHints).
+The LSP specification is defined in TypeScript and published as `metaModel.json`. Many Go LSP implementations need these types, but:
 
-**lspls** solves this by generating types directly from the source specification - always up-to-date, no manual maintenance.
+- **[go.lsp.dev/protocol](https://github.com/go-language-server/protocol)** is stuck on LSP 3.15.3
+  - [Issue #48](https://github.com/go-language-server/protocol/issues/48): "Is there a long term plan to continue to maintain this package?"
+  - [PR #52](https://github.com/go-language-server/protocol/pull/52): Draft PR for 3.17 support has been open since 2023
+  - Missing LSP 3.17+ features like InlayHints, semantic tokens improvements, etc.
 
-Inspired by [gopls](https://github.com/golang/tools/tree/master/gopls)'s internal generator. This is a standalone, reusable version.
+- **[gopls](https://github.com/golang/tools/tree/master/gopls)** generates its own types, but they're in `internal/` and can't be imported
+
+**lspls** solves this by generating types directly from the official specification - always up-to-date, no waiting for upstream.
 
 ## Installation
 
@@ -177,10 +182,29 @@ Contributions welcome! Please:
 3. Add tests for new functionality
 4. Submit a pull request
 
-## Credits
+## Credits & References
 
-- Inspired by [golang/tools/gopls](https://github.com/golang/tools/tree/master/gopls/internal/protocol/generate)
-- LSP Specification by [Microsoft](https://github.com/microsoft/vscode-languageserver-node)
+### gopls Protocol Generator
+
+This tool is inspired by gopls's internal generator. Key files to reference:
+
+| File | Purpose |
+|------|---------|
+| [main.go](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/main.go) | Entry point, orchestration |
+| [types.go](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/types.go) | Model structs for metaModel.json |
+| [output.go](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/output.go) | **Code generation** - union type handling, JSON marshaling |
+| [typenames.go](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/typenames.go) | Anonymous type naming |
+| [README.md](https://github.com/golang/tools/blob/master/gopls/internal/protocol/generate/README.md) | Excellent documentation |
+
+### LSP Specification
+
+- [metaModel.json](https://github.com/microsoft/vscode-languageserver-node/blob/main/protocol/metaModel.json) - Official spec source
+- [LSP 3.17 Spec](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/) - Human-readable docs
+
+### Related Projects
+
+- [go.lsp.dev/protocol](https://github.com/go-language-server/protocol) - Go LSP types (stuck on 3.15.3)
+- [gopls](https://github.com/golang/tools/tree/master/gopls) - Go language server (internal generator)
 
 ## License
 
