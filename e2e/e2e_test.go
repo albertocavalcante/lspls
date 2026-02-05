@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	binary string                                              // path to built lspls binary
+	binary string // path to built lspls binary
 	update = flag.Bool("update", false, "update golden files")
 )
 
