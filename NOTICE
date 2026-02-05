@@ -5,8 +5,11 @@ This project contains code derived from the Go Authors' work.
 
 ================================================================================
 
-Portions of this software are derived from golang.org/x/tools/gopls:
-https://github.com/golang/tools/tree/master/gopls/internal/protocol/generate
+Portions of this software are derived from golang.org/x/tools/gopls at commit
+7b3ed75de0778c292b3f55c661cce98ce6028f94 (v0.41.0+35, 2026-02-03):
+
+Source: https://cs.opensource.google/go/x/tools/+/7b3ed75de0778c292b3f55c661cce98ce6028f94:gopls/internal/protocol/generate/
+Mirror: https://github.com/golang/tools/tree/7b3ed75de0778c292b3f55c661cce98ce6028f94/gopls/internal/protocol/generate
 
 Copyright 2022 The Go Authors. All rights reserved.
 
