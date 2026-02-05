@@ -34,6 +34,7 @@ import "encoding/json"
 
 var _ = json.RawMessage{} // suppress unused import
 
+// Describes the content type that a client supports in various result literals.
 type MarkupKind string
 
 const (

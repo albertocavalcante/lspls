@@ -40,6 +40,7 @@ import "encoding/json"
 
 var _ = json.RawMessage{} // suppress unused import
 
+// Inlay hint information.
 type InlayHint struct {
 	// The position of this hint.
 	Position Position `json:"position"`

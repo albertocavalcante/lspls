@@ -49,6 +49,7 @@ import "encoding/json"
 
 var _ = json.RawMessage{} // suppress unused import
 
+// Position in a text document expressed as zero-based line and character offset.
 type Position struct {
 	// Line position in a document (zero-based).
 	Line uint32 `json:"line"`
@@ -56,6 +57,7 @@ type Position struct {
 	Character uint32 `json:"character"`
 }
 
+// A text edit applicable to a text document.
 type TextEdit struct {
 	// The range of the text document to be manipulated.
 	Range Range `json:"range"`

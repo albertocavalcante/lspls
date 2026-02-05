@@ -93,15 +93,26 @@ type Generator struct {
 
 	// Type filter (nil = all types)
 	typeFilter map[string]bool
+
+	// orTypes tracks generated Or_* union types to avoid duplicates.
+	// Key is the type name (e.g., "Or_TextEdit_AnnotatedTextEdit"), value is the type definition.
+	orTypes *orderedMap[orTypeInfo]
+}
+
+// orTypeInfo holds information about a generated Or_* type.
+type orTypeInfo struct {
+	name      string   // Type name (e.g., "Or_TextEdit_AnnotatedTextEdit")
+	itemNames []string // Sorted Go type names of union members
 }
 
 // New creates a new Generator.
 func New(m *model.Model, cfg Config) *Generator {
 	g := &Generator{
-		model:  m,
-		config: cfg,
-		types:  newOrderedMap[string](),
-		consts: newOrderedMap[string](),
+		model:   m,
+		config:  cfg,
+		types:   newOrderedMap[string](),
+		consts:  newOrderedMap[string](),
+		orTypes: newOrderedMap[orTypeInfo](),
 	}
 
 	if len(cfg.Types) > 0 {
@@ -163,6 +174,26 @@ func (g *Generator) shouldInclude(name string, proposed bool) bool {
 		return false
 	}
 	return true
+}
+
+// isProposed returns true if the type with the given name is proposed.
+func (g *Generator) isProposed(name string) bool {
+	for _, s := range g.model.Structures {
+		if s.Name == name {
+			return s.Proposed
+		}
+	}
+	for _, e := range g.model.Enumerations {
+		if e.Name == name {
+			return e.Proposed
+		}
+	}
+	for _, a := range g.model.TypeAliases {
+		if a.Name == name {
+			return a.Proposed
+		}
+	}
+	return false
 }
 
 func (g *Generator) generateStructure(s *model.Structure) {
@@ -278,14 +309,25 @@ func (g *Generator) generateProtocolFile() ([]byte, error) {
 	buf.WriteString(g.fileHeader())
 	buf.WriteString("package " + g.config.PackageName + "\n\n")
 
-	// Imports (minimal for now)
-	buf.WriteString("import \"encoding/json\"\n\n")
-	buf.WriteString("var _ = json.RawMessage{} // suppress unused import\n\n")
+	// Imports - include fmt if we have Or types
+	hasOrTypes := len(g.orTypes.keys()) > 0
+	if hasOrTypes {
+		buf.WriteString("import (\n")
+		buf.WriteString("\t\"encoding/json\"\n")
+		buf.WriteString("\t\"fmt\"\n")
+		buf.WriteString(")\n\n")
+	} else {
+		buf.WriteString("import \"encoding/json\"\n\n")
+		buf.WriteString("var _ = json.RawMessage{} // suppress unused import\n\n")
+	}
 
 	// Types
 	for _, name := range g.types.keys() {
 		buf.WriteString(g.types.get(name))
 	}
+
+	// Or_* union types
+	buf.WriteString(g.generateOrTypes())
 
 	// Constants
 	if len(g.consts.keys()) > 0 {
@@ -358,9 +400,8 @@ func (g *Generator) goType(t *model.Type, optional bool) string {
 		return "string"
 
 	case "or":
-		// Union type - use any for now
-		// TODO: Generate custom type with JSON marshaling
-		return "any"
+		// Union type - generate Or_* type with JSON marshaling
+		return g.getOrType(t)
 
 	case "and":
 		// Intersection - use embedded structs
@@ -399,6 +440,108 @@ func (g *Generator) goBaseType(t *model.Type) string {
 	default:
 		return "any"
 	}
+}
+
+// getOrType returns the Go type name for an "or" union type, registering it
+// for generation if not already done. Returns "any" for empty or single-item unions.
+func (g *Generator) getOrType(t *model.Type) string {
+	if t.Kind != "or" || len(t.Items) == 0 {
+		return "any"
+	}
+
+	// Filter out null items (already handled by IsOptional) and
+	// proposed types when IncludeProposed is false
+	var nonNullItems []*model.Type
+	for _, item := range t.Items {
+		if item.Kind == "base" && item.Name == "null" {
+			continue
+		}
+		// Skip proposed reference types when not including proposed features
+		if !g.config.IncludeProposed && item.Kind == "reference" && g.isProposed(item.Name) {
+			continue
+		}
+		nonNullItems = append(nonNullItems, item)
+	}
+
+	// If only one non-null item, just use that type directly
+	if len(nonNullItems) == 1 {
+		return g.goType(nonNullItems[0], false)
+	}
+
+	// If no items left, return any
+	if len(nonNullItems) == 0 {
+		return "any"
+	}
+
+	// Get sorted Go type names for all items
+	var itemNames []string
+	for _, item := range nonNullItems {
+		itemNames = append(itemNames, g.goType(item, false))
+	}
+	sort.Strings(itemNames)
+
+	// Generate the type name: Or_Type1_Type2_...
+	typeName := "Or_" + strings.Join(itemNames, "_")
+
+	// Check if we've already registered this type
+	if _, exists := g.orTypes.m[typeName]; !exists {
+		g.orTypes.set(typeName, orTypeInfo{
+			name:      typeName,
+			itemNames: itemNames,
+		})
+	}
+
+	return typeName
+}
+
+// generateOrTypes generates all registered Or_* union types and their JSON methods.
+func (g *Generator) generateOrTypes() string {
+	var buf bytes.Buffer
+
+	for _, name := range g.orTypes.keys() {
+		info := g.orTypes.get(name)
+		g.generateOrType(&buf, info)
+	}
+
+	return buf.String()
+}
+
+// generateOrType generates a single Or_* union type with its MarshalJSON and UnmarshalJSON methods.
+func (g *Generator) generateOrType(buf *bytes.Buffer, info orTypeInfo) {
+	// Type comment listing the union members
+	fmt.Fprintf(buf, "// %s is a union type for: %s\n", info.name, strings.Join(info.itemNames, " | "))
+	fmt.Fprintf(buf, "type %s struct {\n", info.name)
+	fmt.Fprintf(buf, "\tValue any `json:\"value\"`\n")
+	buf.WriteString("}\n\n")
+
+	// MarshalJSON method
+	fmt.Fprintf(buf, "func (t %s) MarshalJSON() ([]byte, error) {\n", info.name)
+	buf.WriteString("\tswitch x := t.Value.(type) {\n")
+	for _, name := range info.itemNames {
+		fmt.Fprintf(buf, "\tcase %s:\n", name)
+		buf.WriteString("\t\treturn json.Marshal(x)\n")
+	}
+	buf.WriteString("\tcase nil:\n")
+	buf.WriteString("\t\treturn []byte(\"null\"), nil\n")
+	buf.WriteString("\t}\n")
+	fmt.Fprintf(buf, "\treturn nil, fmt.Errorf(\"type %%T not one of %v\", t.Value)\n", info.itemNames)
+	buf.WriteString("}\n\n")
+
+	// UnmarshalJSON method
+	fmt.Fprintf(buf, "func (t *%s) UnmarshalJSON(x []byte) error {\n", info.name)
+	buf.WriteString("\tif string(x) == \"null\" {\n")
+	buf.WriteString("\t\tt.Value = nil\n")
+	buf.WriteString("\t\treturn nil\n")
+	buf.WriteString("\t}\n")
+	for i, name := range info.itemNames {
+		fmt.Fprintf(buf, "\tvar h%d %s\n", i, name)
+		fmt.Fprintf(buf, "\tif err := json.Unmarshal(x, &h%d); err == nil {\n", i)
+		fmt.Fprintf(buf, "\t\tt.Value = h%d\n", i)
+		buf.WriteString("\t\treturn nil\n")
+		buf.WriteString("\t}\n")
+	}
+	fmt.Fprintf(buf, "\treturn fmt.Errorf(\"unmarshal failed to match one of %v\")\n", info.itemNames)
+	buf.WriteString("}\n\n")
 }
 
 // Helper functions

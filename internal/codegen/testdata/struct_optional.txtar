@@ -47,11 +47,13 @@ import "encoding/json"
 
 var _ = json.RawMessage{} // suppress unused import
 
+// A literal to identify a text document in the client.
 type TextDocumentIdentifier struct {
 	// The text document's URI.
 	Uri string `json:"uri"`
 }
 
+// A text document identifier to denote a specific version.
 type VersionedTextDocumentIdentifier struct {
 	// The text document's URI.
 	Uri string `json:"uri"`

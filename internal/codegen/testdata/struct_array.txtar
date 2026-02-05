@@ -49,6 +49,7 @@ import "encoding/json"
 
 var _ = json.RawMessage{} // suppress unused import
 
+// The publish diagnostic notification's parameters.
 type PublishDiagnosticsParams struct {
 	// The URI for which diagnostic information is reported.
 	Uri string `json:"uri"`
@@ -56,6 +57,7 @@ type PublishDiagnosticsParams struct {
 	Diagnostics []Diagnostic `json:"diagnostics"`
 }
 
+// A workspace edit represents changes to many resources.
 type WorkspaceEdit struct {
 	// Holds changes to existing resources.
 	Changes map[string][]TextEdit `json:"changes,omitempty"`

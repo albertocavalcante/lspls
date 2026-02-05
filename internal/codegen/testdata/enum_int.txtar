@@ -44,6 +44,7 @@ import "encoding/json"
 
 var _ = json.RawMessage{} // suppress unused import
 
+// The diagnostic's severity.
 type DiagnosticSeverity uint32
 
 const (

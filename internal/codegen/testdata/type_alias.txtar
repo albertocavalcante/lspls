@@ -32,8 +32,11 @@ import "encoding/json"
 
 var _ = json.RawMessage{} // suppress unused import
 
+// A tagging type for string properties that are actually URIs.
 type DocumentUri = string
 
+// A token used to report progress.
 type ProgressToken = int32
 
+// A tagging type for string properties that are actually URIs.
 type URI = string
