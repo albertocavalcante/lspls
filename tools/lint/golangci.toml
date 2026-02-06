@@ -44,9 +44,6 @@ disabled-checks = [
   "paramTypeCombine",    # Style preference
 ]
 
-[linters.settings.gofumpt]
-extra-rules = true
-
 [linters.settings.revive]
 severity = "warning"
 rules = [
