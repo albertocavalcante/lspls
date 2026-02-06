@@ -21,9 +21,9 @@ enable = [
   "prealloc",      # Suggest slice preallocation
   "nolintlint",    # Ensure //nolint comments are properly used
   "whitespace",    # Leading/trailing whitespace
-  "gofumpt",       # Stricter gofmt
   "revive",        # Replacement for golint
 ]
+# Note: gofumpt removed - golangci-lint v2.8.0 treats formatters separately
 
 [linters.settings.errcheck]
 check-type-assertions = false

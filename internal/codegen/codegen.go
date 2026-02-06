@@ -196,8 +196,10 @@ func (g *Generator) Generate() (*Output, error) {
 		g.generateTypeAlias(a)
 	}
 
-	// Process requests and notifications for interface generation
-	if g.config.GenerateServer || g.config.GenerateClient {
+	// Process requests and notifications for interface generation.
+	// Skip when filtering specific types since interfaces would reference
+	// types not included in the filtered output.
+	if g.typeFilter == nil && (g.config.GenerateServer || g.config.GenerateClient) {
 		g.processRequests()
 		g.processNotifications()
 	}
