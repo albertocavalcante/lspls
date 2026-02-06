@@ -12,6 +12,69 @@ import (
 	"github.com/albertocavalcante/lspls/internal/model"
 )
 
+func TestMethodToGoName(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "simple method",
+			input:    "initialize",
+			expected: "Initialize",
+		},
+		{
+			name:     "method with slash",
+			input:    "textDocument/hover",
+			expected: "TextDocumentHover",
+		},
+		{
+			name:     "method with multiple slashes",
+			input:    "textDocument/codeAction/resolve",
+			expected: "TextDocumentCodeActionResolve",
+		},
+		{
+			name:     "dollar prefix",
+			input:    "$/cancelRequest",
+			expected: "CancelRequest",
+		},
+		{
+			name:     "dollar prefix with slash",
+			input:    "$/progress",
+			expected: "Progress",
+		},
+		{
+			name:     "client prefix",
+			input:    "client/registerCapability",
+			expected: "ClientRegisterCapability",
+		},
+		{
+			name:     "window prefix",
+			input:    "window/showMessage",
+			expected: "WindowShowMessage",
+		},
+		{
+			name:     "workspace prefix",
+			input:    "workspace/configuration",
+			expected: "WorkspaceConfiguration",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := methodToGoName(tc.input)
+			if result != tc.expected {
+				t.Errorf("methodToGoName(%q) = %q, want %q", tc.input, result, tc.expected)
+			}
+		})
+	}
+}
+
 func TestExportName(t *testing.T) {
 	tests := []struct {
 		name     string

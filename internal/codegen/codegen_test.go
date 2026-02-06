@@ -7,6 +7,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -81,17 +82,18 @@ func runCodegen(input []byte, flags []string) (map[string][]byte, error) {
 	cfg := codegen.Config{
 		PackageName:     "protocol",
 		ResolveDeps:     true, // Default to true to match CLI behavior
-		IncludeProposed: containsFlag(flags, "proposed"),
+		IncludeProposed: slices.Contains(flags, "proposed"),
+		GenerateServer:  slices.Contains(flags, "server"),
+		GenerateClient:  slices.Contains(flags, "client"),
 	}
 
 	// Parse type filter from flags
 	for _, f := range flags {
-		if strings.HasPrefix(f, "types=") {
-			typeList := strings.TrimPrefix(f, "types=")
+		if typeList, ok := strings.CutPrefix(f, "types="); ok {
 			cfg.Types = strings.Split(typeList, ",")
 		}
-		if strings.HasPrefix(f, "package=") {
-			cfg.PackageName = strings.TrimPrefix(f, "package=")
+		if pkgName, ok := strings.CutPrefix(f, "package="); ok {
+			cfg.PackageName = pkgName
 		}
 		if f == "no-resolve-deps" {
 			cfg.ResolveDeps = false
@@ -141,13 +143,4 @@ func stripGeneratedHeader(content []byte) []byte {
 	}
 
 	return []byte(strings.Join(result, "\n"))
-}
-
-func containsFlag(flags []string, name string) bool {
-	for _, f := range flags {
-		if f == name {
-			return true
-		}
-	}
-	return false
 }
