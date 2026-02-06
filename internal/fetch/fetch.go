@@ -263,16 +263,16 @@ func isHex(s string) bool {
 	return true
 }
 
-// FetchRaw fetches the raw metaModel.json content via HTTP (for quick access).
+// Raw fetches the raw metaModel.json content via HTTP (for quick access).
 // This is faster than cloning but doesn't provide commit hash.
-func FetchRaw(ctx context.Context, ref string) ([]byte, error) {
+func Raw(ctx context.Context, ref string) ([]byte, error) {
 	if ref == "" {
 		ref = DefaultRef
 	}
 
 	url := fmt.Sprintf("https://raw.githubusercontent.com/microsoft/vscode-languageserver-node/%s/%s", ref, MetaModelPath)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}

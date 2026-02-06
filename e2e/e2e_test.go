@@ -140,7 +140,8 @@ func runTestCase(t *testing.T, file, name string) {
 	}
 
 	// Build command arguments.
-	args := []string{"--spec", inputPath, "--dry-run"}
+	args := make([]string, 0, 3+len(tc.flags))
+	args = append(args, "--spec", inputPath, "--dry-run")
 	args = append(args, tc.flags...)
 
 	// Execute the CLI.
@@ -323,7 +324,7 @@ func updateE2EArchive(ar *txtar.Archive, got map[string][]byte) *txtar.Archive {
 	}
 
 	// Add want/* files in sorted order.
-	var wantFiles []string
+	wantFiles := make([]string, 0, len(got))
 	for name := range got {
 		wantFiles = append(wantFiles, name)
 	}

@@ -170,7 +170,7 @@ func UpdateArchive(ar *txtar.Archive, got map[string][]byte) *txtar.Archive {
 	}
 
 	// Add want/* files in sorted order for determinism
-	var wantFiles []string
+	wantFiles := make([]string, 0, len(got))
 	for name := range got {
 		wantFiles = append(wantFiles, name)
 	}
@@ -210,7 +210,7 @@ func LoadTestCases(t *testing.T, dir string) []*Case {
 		t.Fatalf("no txtar files found in %q", dir)
 	}
 
-	var cases []*Case
+	cases := make([]*Case, 0, len(files))
 	for _, file := range files {
 		ar, err := txtar.ParseFile(file)
 		if err != nil {
