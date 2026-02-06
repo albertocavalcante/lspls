@@ -208,7 +208,8 @@ func (g *Generator) generateStructure(s *model.Structure) {
 	if s.Documentation != "" {
 		writeDocComment(&buf, s.Documentation)
 	}
-	if s.Since != "" {
+	// Add @since only if not already in documentation (check for version pattern)
+	if s.Since != "" && !strings.Contains(s.Documentation, "@since "+s.Since) {
 		fmt.Fprintf(&buf, "//\n// @since %s\n", s.Since)
 	}
 
@@ -231,6 +232,10 @@ func (g *Generator) generateStructure(s *model.Structure) {
 
 	// Properties
 	for _, p := range s.Properties {
+		// Skip proposed properties when not including proposed types
+		if p.Proposed && !g.config.IncludeProposed {
+			continue
+		}
 		g.generateProperty(&buf, &p)
 	}
 
@@ -264,7 +269,8 @@ func (g *Generator) generateEnumeration(e *model.Enumeration) {
 	if e.Documentation != "" {
 		writeDocComment(&typeBuf, e.Documentation)
 	}
-	if e.Since != "" {
+	// Add @since only if not already in documentation (check for version pattern)
+	if e.Since != "" && !strings.Contains(e.Documentation, "@since "+e.Since) {
 		fmt.Fprintf(&typeBuf, "//\n// @since %s\n", e.Since)
 	}
 
@@ -293,7 +299,8 @@ func (g *Generator) generateTypeAlias(a *model.TypeAlias) {
 	if a.Documentation != "" {
 		writeDocComment(&buf, a.Documentation)
 	}
-	if a.Since != "" {
+	// Add @since only if not already in documentation (check for version pattern)
+	if a.Since != "" && !strings.Contains(a.Documentation, "@since "+a.Since) {
 		fmt.Fprintf(&buf, "//\n// @since %s\n", a.Since)
 	}
 	if a.Deprecated != "" {
@@ -668,6 +675,10 @@ func (g *Generator) collectDeps(typeName string, visited map[string]bool) {
 	for _, s := range g.model.Structures {
 		if s.Name == typeName {
 			for _, prop := range s.Properties {
+				// Skip proposed properties when not including proposed types
+				if prop.Proposed && !g.config.IncludeProposed {
+					continue
+				}
 				g.collectTypeRefs(prop.Type, visited)
 			}
 			// Also check extends and mixins
