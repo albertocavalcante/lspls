@@ -21,10 +21,10 @@ import (
 
 func TestConvertBaseType(t *testing.T) {
 	tests := []struct {
-		name     string
-		lspType  string
-		want     string
-		wantErr  bool
+		name    string
+		lspType string
+		want    string
+		wantErr bool
 	}{
 		{name: "string", lspType: "string", want: "string"},
 		{name: "integer", lspType: "integer", want: "int32"},
@@ -286,4 +286,3 @@ func stripGeneratedHeader(content []byte) []byte {
 
 	return []byte(strings.Join(result, "\n"))
 }
-

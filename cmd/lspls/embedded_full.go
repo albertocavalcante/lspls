@@ -22,4 +22,3 @@ func init() {
 	// generator.Register(thrift.NewGenerator())
 	// generator.Register(kotlin.NewGenerator())
 }
-

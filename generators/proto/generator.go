@@ -47,7 +47,7 @@ func (g *Generator) Generate(ctx context.Context, m *model.Model, cfg generator.
 		LSPVersion:      cfg.LSPVersion,
 	}
 
-	// Create internal generator and generate  
+	// Create internal generator and generate
 	gen := New(m, internalCfg)
 	out, err := gen.Generate()
 	if err != nil {

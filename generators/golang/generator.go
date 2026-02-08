@@ -58,13 +58,13 @@ func (g *GoGenerator) Generate(ctx context.Context, m *model.Model, cfg generato
 
 	// Convert to generator.Output
 	result := generator.NewOutput()
-	
+
 	// Determine output filename
 	filename := "protocol.go"
 	if cfg.OutputFile != "" {
 		filename = cfg.OutputFile
 	}
-	
+
 	result.Add(filename, out.Protocol)
 	return result, nil
 }

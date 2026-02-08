@@ -49,9 +49,9 @@ pre-push:
     go-test-full:
       run: go test -race ./...
 
-    # Lint check
+    # Lint check (uses tools.go.mod)
     lint:
-      run: golangci-lint run --config=tools/lint/golangci.toml
+      run: go tool -modfile=tools.go.mod golangci-lint run --config=tools/lint/golangci.toml
 
 # Output settings
 output:

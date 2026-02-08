@@ -63,7 +63,7 @@ func (g *Codegen) Generate() (*Output, error) {
 	var b strings.Builder
 
 	// Header
-	b.WriteString(g.generateHeader())  
+	b.WriteString(g.generateHeader())
 	b.WriteString("\n")
 
 	// Package declaration
