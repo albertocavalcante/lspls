@@ -11,13 +11,15 @@ package main
 import (
 	"github.com/albertocavalcante/lspls/generator"
 	"github.com/albertocavalcante/lspls/generators/golang"
+	"github.com/albertocavalcante/lspls/generators/proto"
 )
 
 func init() {
 	// Full build: all generators embedded
-	// Additional generators will be added here as they're implemented:
 	generator.Register(golang.NewGenerator())
-	// generator.Register(proto.NewGenerator())
+	generator.Register(proto.NewGenerator())
+	// Future generators:
 	// generator.Register(thrift.NewGenerator())
 	// generator.Register(kotlin.NewGenerator())
 }
+
