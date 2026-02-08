@@ -9,7 +9,7 @@ package codegen
 import (
 	"testing"
 
-	"github.com/albertocavalcante/lspls/internal/model"
+	"github.com/albertocavalcante/lspls/model"
 )
 
 func TestMethodToGoName(t *testing.T) {

@@ -21,7 +21,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/albertocavalcante/lspls/internal/model"
+	"github.com/albertocavalcante/lspls/model"
 )
 
 // Config controls code generation behavior.

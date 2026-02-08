@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/albertocavalcante/lspls/internal/model"
+	"github.com/albertocavalcante/lspls/model"
 )
 
 const (

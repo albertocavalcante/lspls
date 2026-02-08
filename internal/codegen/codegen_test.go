@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/albertocavalcante/lspls/internal/codegen"
-	"github.com/albertocavalcante/lspls/internal/model"
+	"github.com/albertocavalcante/lspls/model"
 	"github.com/albertocavalcante/lspls/internal/testutil"
 	"golang.org/x/tools/txtar"
 )

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/albertocavalcante/lspls/internal/model"
+	"github.com/albertocavalcante/lspls/model"
 )
 
 func TestResolveTransitiveDeps(t *testing.T) {
