@@ -1,8 +1,9 @@
 # golangci-lint configuration (v2)
 # https://golangci-lint.run/usage/configuration/
 #
-# Run: golangci-lint run --config=tools/lint/golangci.toml
-# Or:  just lint
+# Run via wrapper (uses tools.go.mod and this config):
+#   golangci-lint run          # uses .envrc shell function
+#   just lint                  # justfile recipe
 
 version = "2"
 
@@ -16,12 +17,12 @@ default = "standard"
 
 # Enable additional linters for idiomatic Go code
 enable = [
-  "gocritic",      # Opinionated linter with many good checks
-  "unconvert",     # Remove unnecessary type conversions
-  "prealloc",      # Suggest slice preallocation
-  "nolintlint",    # Ensure //nolint comments are properly used
-  "whitespace",    # Leading/trailing whitespace
-  "revive",        # Replacement for golint
+  "gocritic",   # Opinionated linter with many good checks
+  "unconvert",  # Remove unnecessary type conversions
+  "prealloc",   # Suggest slice preallocation
+  "nolintlint", # Ensure //nolint comments are properly used
+  "whitespace", # Leading/trailing whitespace
+  "revive",     # Replacement for golint
 ]
 # Note: gofumpt removed - golangci-lint v2.8.0 treats formatters separately
 
@@ -39,9 +40,7 @@ checks = ["all", "-ST1023", "-S1009", "-QF*"]
 [linters.settings.gocritic]
 enabled-tags = ["diagnostic", "style", "opinionated"]
 disabled-checks = [
-  "hugeParam",           # Too noisy for structs
-  "rangeValCopy",        # Often acceptable
-  "paramTypeCombine",    # Style preference
+  "paramTypeCombine", # Style preference
 ]
 
 [linters.settings.revive]
@@ -69,11 +68,7 @@ rules = [
 ]
 
 [linters.exclusions]
-presets = [
-  "comments",
-  "std-error-handling",
-  "common-false-positives",
-]
+presets = ["comments", "std-error-handling", "common-false-positives"]
 
 [[linters.exclusions.rules]]
 path = "_test\\.go"

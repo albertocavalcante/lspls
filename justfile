@@ -61,9 +61,9 @@ test-sum-race:
 test-cover:
     go test -cover ./...
 
-# Run linter
+# Run linter (uses tools.go.mod and tools/lint/golangci.toml)
 lint:
-    go tool -modfile=tools.go.mod golangci-lint run
+    go tool -modfile=tools.go.mod golangci-lint run --config=tools/lint/golangci.toml
 
 # Run go vet
 vet:
