@@ -65,6 +65,14 @@ test-cover:
 lint:
     go tool -modfile=tools.go.mod golangci-lint run --config=tools/lint/golangci.toml
 
+# Run E2E compile verification tests (requires buf, protoc)
+test-e2e:
+    go test -tags e2e ./e2e/... -v
+
+# Run all tests including E2E
+test-all:
+    go test -tags e2e ./...
+
 # Run go vet
 vet:
     go vet ./...
@@ -109,10 +117,6 @@ gen-inlayhint:
 update-golden:
     go test ./generators/golang/... -update
     go test ./e2e/... -update
-
-# Run e2e tests only
-test-e2e:
-    go test -v ./e2e/...
 
 # Run generator tests only
 test-generator:

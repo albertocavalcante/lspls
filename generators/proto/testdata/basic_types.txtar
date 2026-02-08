@@ -32,6 +32,13 @@ syntax = "proto3";
 
 package lsp;
 
+// Import well-known types for dynamic values
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+
+// Type Aliases
+// The following type aliases from LSP are mapped to proto3 types:
+
 // Position in a text document.
 message Position {
   uint32 line = 1;
@@ -43,3 +50,4 @@ message Range {
   Position start = 1;
   Position end = 2;
 }
+
