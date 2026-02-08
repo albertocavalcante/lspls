@@ -137,9 +137,11 @@ func (g *Codegen) generateMessage(s *model.Structure) string {
 
 		fieldName := toProtoFieldName(prop.Name)
 
-		// Add field documentation
+		// Add field documentation (all lines)
 		if prop.Documentation != "" {
-			b.WriteString(fmt.Sprintf("  // %s\n", strings.Split(prop.Documentation, "\n")[0]))
+			for _, line := range strings.Split(prop.Documentation, "\n") {
+				b.WriteString(fmt.Sprintf("  // %s\n", line))
+			}
 		}
 
 		// Optional fields
