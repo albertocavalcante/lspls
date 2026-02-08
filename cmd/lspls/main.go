@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/albertocavalcante/lspls/internal/codegen"
-	"github.com/albertocavalcante/lspls/internal/fetch"
+	"github.com/albertocavalcante/lspls/fetch"
 )
 
 var (
