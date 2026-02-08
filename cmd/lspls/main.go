@@ -4,14 +4,15 @@
 // Use of this source code is governed by a MIT-style license
 // that can be found in the LICENSE file.
 
-// Command lspls generates Go types from the LSP specification.
+// Command lspls generates typed code from the LSP specification.
 //
 // Usage:
 //
-//	lspls generate [flags]
+//	lspls [flags]
 //
 // Flags:
 //
+//	--target         Target generator (default: go)
 //	-o, --output     Output directory or file (default: stdout)
 //	-v, --version    LSP version/git ref (default: 3.17.6)
 //	-t, --types      Comma-separated types to generate (default: all)
@@ -32,7 +33,7 @@ import (
 	"time"
 
 	"github.com/albertocavalcante/lspls/fetch"
-	"github.com/albertocavalcante/lspls/generators/golang"
+	"github.com/albertocavalcante/lspls/generator"
 )
 
 var (
@@ -53,11 +54,14 @@ func run() error {
 	showVersion := flag.Bool("version", false, "Show version information")
 	showHelp := flag.Bool("help", false, "Show help")
 
+	// Generator selection
+	target := flag.String("target", "go", "Target generator (available: "+strings.Join(generator.List(), ", ")+")")
+
 	// Generate command flags
 	output := flag.String("o", "", "Output directory or file (default: stdout)")
 	lspVersion := flag.String("v", fetch.DefaultRef, "LSP version or git ref")
 	types := flag.String("t", "", "Comma-separated types to generate (default: all)")
-	packageName := flag.String("p", "protocol", "Go package name")
+	packageName := flag.String("p", "protocol", "Package name (for Go: Go package name)")
 	specPath := flag.String("spec", "", "Path to local metaModel.json")
 	repoDir := flag.String("repo", "", "Path to local vscode-languageserver-node clone")
 	proposed := flag.Bool("proposed", false, "Include proposed/unstable features")
@@ -68,16 +72,18 @@ func run() error {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `lspls - LSP Protocol Type Generator
 
-Generate Go types from the Language Server Protocol specification.
+Generate typed code from the Language Server Protocol specification.
 
 Usage:
   lspls [flags]
 
 Flags:
+  --target string  Target generator (default: go)
+                   Available: %s
   -o string        Output directory or file (default: stdout)
   -v string        LSP version or git ref (default: %s)
   -t string        Comma-separated types to generate (default: all)
-  -p string        Go package name (default: protocol)
+  -p string        Package name (default: protocol)
   --spec string    Path to local metaModel.json
   --repo string    Path to local vscode-languageserver-node clone
   --proposed       Include proposed/unstable features
@@ -88,7 +94,7 @@ Flags:
   --help           Show this help
 
 Examples:
-  # Generate all types to stdout
+  # Generate Go types to stdout (default)
   lspls
 
   # Generate to a directory
@@ -103,7 +109,10 @@ Examples:
   # Use local metaModel.json
   lspls --spec ./metaModel.json -o ./protocol/
 
-`, fetch.DefaultRef)
+  # Generate Protocol Buffers (when available)
+  lspls --target=proto -o ./lsp.proto
+
+`, strings.Join(generator.List(), ", "), fetch.DefaultRef)
 	}
 
 	flag.Parse()
@@ -115,7 +124,14 @@ Examples:
 
 	if *showVersion {
 		fmt.Printf("lspls %s (commit: %s, built: %s)\n", version, commit, date)
+		fmt.Printf("Available generators: %s\n", strings.Join(generator.List(), ", "))
 		return nil
+	}
+
+	// Resolve generator
+	gen, ok := generator.Get(*target)
+	if !ok {
+		return fmt.Errorf("unknown generator: %s\nAvailable: %s", *target, strings.Join(generator.List(), ", "))
 	}
 
 	// Fetch the specification
@@ -147,21 +163,23 @@ Examples:
 			len(result.Model.Structures),
 			len(result.Model.Enumerations),
 			len(result.Model.TypeAliases))
+		fmt.Fprintf(os.Stderr, "Using generator: %s v%s\n", gen.Metadata().Name, gen.Metadata().Version)
 	}
 
-	// Configure code generation
-	cfg := golang.Config{
-		PackageName:     *packageName,
+	// Build generator config
+	cfg := generator.Config{
+		OutputDir:       *output,
 		ResolveDeps:     *resolveDeps,
 		IncludeProposed: *proposed,
 		GenerateClient:  true,
 		GenerateServer:  true,
-		GenerateJSON:    true,
 		Source:          result.Source,
 		Ref:             result.Ref,
 		CommitHash:      result.CommitHash,
 		LSPVersion:      result.Model.Version.Version,
+		Options:         make(map[string]string),
 	}
+	cfg.Options["package"] = *packageName
 
 	if *types != "" {
 		cfg.Types = strings.Split(*types, ",")
@@ -171,41 +189,50 @@ Examples:
 	}
 
 	// Generate code
-	gen := golang.New(result.Model, cfg)
-	out, err := gen.Generate()
+	out, err := gen.Generate(ctx, result.Model, cfg)
 	if err != nil {
 		return fmt.Errorf("generate code: %w", err)
 	}
 
 	// Output
 	if *dryRun || *output == "" {
-		fmt.Println(string(out.Protocol))
+		// Dry run or stdout: print first file
+		for _, content := range out.Files {
+			fmt.Println(string(content))
+			break
+		}
 		return nil
 	}
 
-	// Write to file or directory
+	// Write files
 	outputPath := *output
 	if strings.HasSuffix(outputPath, "/") || isDir(outputPath) {
-		// Directory output - write multiple files
+		// Directory output
 		if err := os.MkdirAll(outputPath, 0o755); err != nil {
 			return fmt.Errorf("create output directory: %w", err)
 		}
 
-		if err := os.WriteFile(filepath.Join(outputPath, "protocol.go"), out.Protocol, 0o644); err != nil {
-			return fmt.Errorf("write protocol.go: %w", err)
-		}
-
-		if *verbose {
-			fmt.Fprintf(os.Stderr, "Wrote %s/protocol.go\n", outputPath)
+		for filename, content := range out.Files {
+			path := filepath.Join(outputPath, filename)
+			if err := os.WriteFile(path, content, 0o644); err != nil {
+				return fmt.Errorf("write %s: %w", filename, err)
+			}
+			if *verbose {
+				fmt.Fprintf(os.Stderr, "Wrote %s\n", path)
+			}
 		}
 	} else {
-		// Single file output
+		// Single file output - use the output path as the filename
 		if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
 			return fmt.Errorf("create output directory: %w", err)
 		}
 
-		if err := os.WriteFile(outputPath, out.Protocol, 0o644); err != nil {
-			return fmt.Errorf("write output: %w", err)
+		// Write combined or first file
+		for _, content := range out.Files {
+			if err := os.WriteFile(outputPath, content, 0o644); err != nil {
+				return fmt.Errorf("write output: %w", err)
+			}
+			break
 		}
 
 		if *verbose {
