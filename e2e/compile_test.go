@@ -142,7 +142,7 @@ func TestProtoOutputValid(t *testing.T) {
 	}
 
 	// Generate proto for subset of types
-	types := "Position,Range,TextEdit,TextDocumentIdentifier,Location"
+	types := "Position,Range,TextEdit,TextDocumentIdentifier,Location,WorkspaceEdit"
 	protoFile := filepath.Join(tmpDir, "protocol.proto")
 
 	cmd := exec.CommandContext(ctx, binaryPath,

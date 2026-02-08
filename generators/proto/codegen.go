@@ -9,49 +9,28 @@ package proto
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"unicode"
 
 	"github.com/albertocavalcante/lspls/model"
 )
 
-// Config holds configuration for proto generation.
-type Config struct {
-	// PackageName is the proto package name (e.g., "lsp").
-	PackageName string
-
-	// GoPackage is the go_package option value.
-	GoPackage string
-
-	// Types to include (empty means all).
-	Types []string
-
-	// ResolveDeps includes transitively referenced types.
-	ResolveDeps bool
-
-	// IncludeProposed generates types marked as proposed.
-	IncludeProposed bool
-
-	// Source metadata for header comments.
-	Source     string
-	Ref        string
-	CommitHash string
-	LSPVersion string
-}
-
 // Codegen generates proto3 definitions from the LSP model.
 type Codegen struct {
-	model      *model.Model
-	config     Config
-	knownTypes map[string]bool // Types that will be generated (used to skip unknown refs)
+	model           *model.Model
+	config          Config
+	resolver        *TypeResolver
+	pendingWrappers map[string]string // Helper messages generated on-the-fly (name -> definition)
 }
 
 // New creates a new proto Codegen.
 func New(m *model.Model, cfg Config) *Codegen {
 	return &Codegen{
-		model:      m,
-		config:     cfg,
-		knownTypes: make(map[string]bool),
+		model:           m,
+		config:          cfg,
+		resolver:        NewTypeResolver(m, cfg.IncludeProposed, cfg.TypeOverrides),
+		pendingWrappers: make(map[string]string),
 	}
 }
 
@@ -63,13 +42,6 @@ type Output struct {
 // Generate produces the proto3 definitions.
 func (g *Codegen) Generate() (*Output, error) {
 	var b strings.Builder
-
-	// Build set of known types that will be generated
-	// This is used to skip fields that reference types we won't generate
-	g.buildKnownTypes()
-
-	// Build type alias lookup table
-	g.buildTypeAliasMap()
 
 	// Header
 	b.WriteString(g.generateHeader())
@@ -96,7 +68,7 @@ func (g *Codegen) Generate() (*Output, error) {
 			continue
 		}
 		// Add comment explaining the mapping
-		protoType := g.resolveTypeAlias(alias.Name)
+		protoType := g.resolver.Resolve(alias.Name)
 		b.WriteString(fmt.Sprintf("// %s -> %s\n", alias.Name, protoType))
 	}
 	b.WriteString("\n")
@@ -119,146 +91,154 @@ func (g *Codegen) Generate() (*Output, error) {
 		b.WriteString("\n")
 	}
 
+	// Generate union types (oneof)
+	for _, alias := range g.model.TypeAliases {
+		if !g.config.IncludeProposed && alias.Proposed {
+			continue
+		}
+		if alias.Type != nil && alias.Type.Kind == "or" {
+			// Skip simple mappings (predefined in config)
+			if g.resolver.IsMapped(alias.Name) {
+				continue
+			}
+
+			b.WriteString(g.generateUnion(alias))
+			b.WriteString("\n")
+		}
+	}
+
+	// Generate pending wrappers (from map<K, repeated V>)
+	// Sort for determinism
+	if len(g.pendingWrappers) > 0 {
+		b.WriteString("// Helper messages for complex types (e.g. maps with array values)\n")
+		keys := make([]string, 0, len(g.pendingWrappers))
+		for k := range g.pendingWrappers {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			b.WriteString(g.pendingWrappers[k])
+			b.WriteString("\n")
+		}
+	}
+
 	return &Output{Proto: []byte(b.String())}, nil
 }
 
-// buildKnownTypes populates the knownTypes set with all types that will be generated.
-// This is used to skip fields that reference proposed types when --proposed is false.
-func (g *Codegen) buildKnownTypes() {
-	// Add all structures that will be generated
-	for _, s := range g.model.Structures {
-		if !g.config.IncludeProposed && s.Proposed {
-			continue
+// generateUnion produces a oneof message for a union type.
+func (g *Codegen) generateUnion(alias *model.TypeAlias) string {
+	var b strings.Builder
+
+	// Documentation
+	if alias.Documentation != "" {
+		for _, line := range strings.Split(alias.Documentation, "\n") {
+			b.WriteString(fmt.Sprintf("// %s\n", line))
 		}
-		g.knownTypes[s.Name] = true
 	}
 
-	// Add all enums that will be generated
-	for _, e := range g.model.Enumerations {
-		if !g.config.IncludeProposed && e.Proposed {
-			continue
-		}
-		g.knownTypes[e.Name] = true
-	}
+	msgName := toProtoMessageName(alias.Name)
+	b.WriteString(fmt.Sprintf("message %s {\n", msgName))
+	b.WriteString("  oneof value {\n")
 
-	// Add all type aliases (these are mapped to proto types, so always "known")
-	for _, a := range g.model.TypeAliases {
-		if !g.config.IncludeProposed && a.Proposed {
-			continue
-		}
-		g.knownTypes[a.Name] = true
-	}
-
-	// Add well-known proto types
-	g.knownTypes["google.protobuf.Any"] = true
-	g.knownTypes["google.protobuf.Value"] = true
-	g.knownTypes["google.protobuf.Struct"] = true
-	g.knownTypes["google.protobuf.ListValue"] = true
-}
-
-// typeAliasMap maps LSP type alias names to their proto3 equivalents.
-var typeAliasMap = map[string]string{
-	// Simple type aliases -> string
-	"DocumentUri":                 "string",
-	"URI":                         "string",
-	"ChangeAnnotationIdentifier":  "string",
-	"Pattern":                     "string",
-	"GlobPattern":                 "string",
-	"RegularExpressionEngineKind": "string",
-
-	// Progress token can be string or integer - use string for simplicity
-	"ProgressToken": "string",
-
-	// Integer-based types
-	"DocumentSelector": "string", // Complex type, simplified
-
-	// Dynamic/any types -> google.protobuf.Value
-	"LSPAny":    "google.protobuf.Value",
-	"LSPObject": "google.protobuf.Struct",
-	"LSPArray":  "google.protobuf.ListValue",
-
-	// Other complex type aliases that are really messages - keep as-is
-	// These will be generated as separate messages
-}
-
-// buildTypeAliasMap processes model.TypeAliases and adds them to the map.
-func (g *Codegen) buildTypeAliasMap() {
-	for _, alias := range g.model.TypeAliases {
-		// Skip if already in static map
-		if _, exists := typeAliasMap[alias.Name]; exists {
+	fieldNum := 1
+	for _, item := range alias.Type.Items {
+		if item == nil || (item.Kind == "base" && item.Name == "null") {
 			continue
 		}
 
-		if alias.Type == nil {
-			continue
-		}
+		var line string
+		var err error
 
-		switch alias.Type.Kind {
-		case "base":
-			// Simple type alias (e.g., DocumentUri = string)
-			if protoType, err := convertBaseType(alias.Type.Name); err == nil {
-				typeAliasMap[alias.Name] = protoType
-			}
-
-		case "reference":
-			// Reference to another type (use as-is, will resolve to message)
-			typeAliasMap[alias.Name] = toProtoMessageName(alias.Type.Name)
-
-		case "or":
-			// Union type - extract first non-null concrete type
-			for _, item := range alias.Type.Items {
-				if item == nil {
-					continue
-				}
-				if item.Kind == "base" && item.Name == "null" {
-					continue // Skip null
-				}
-				switch item.Kind {
-				case "base":
-					if protoType, err := convertBaseType(item.Name); err == nil {
-						typeAliasMap[alias.Name] = protoType
-					}
-				case "reference":
-					typeAliasMap[alias.Name] = toProtoMessageName(item.Name)
-				}
-				break // Use first non-null type
-			}
-
+		switch item.Kind {
 		case "array":
-			// Array type alias - map to repeated
-			if alias.Type.Element != nil && alias.Type.Element.Kind == "reference" {
-				typeAliasMap[alias.Name] = "repeated " + toProtoMessageName(alias.Type.Element.Name)
-			}
+			line, err = g.generateUnionArrayField(item, fieldNum)
+		case "map":
+			line, err = g.generateUnionMapField(item, fieldNum)
+		default:
+			line, err = g.generateUnionStandardField(item, fieldNum)
+		}
+
+		if err != nil {
+			b.WriteString(fmt.Sprintf("    // skipped %v: %v\n", item, err))
+		} else {
+			b.WriteString(line)
+			fieldNum++
 		}
 	}
+
+	b.WriteString("  }\n")
+	b.WriteString("}\n")
+	return b.String()
 }
 
-// resolveTypeAlias converts a type alias name to its proto3 equivalent.
-func (g *Codegen) resolveTypeAlias(name string) string {
-	if protoType, exists := typeAliasMap[name]; exists {
-		return protoType
+func (g *Codegen) generateUnionArrayField(item *model.Type, fieldNum int) (string, error) {
+	elem, err := g.convertType(item.Element)
+	if err != nil {
+		return "", err
 	}
-	// Unknown alias - might be a message type
-	return toProtoMessageName(name)
+
+	// Wrapper naming: ArrayOf_Type
+	clean := strings.ReplaceAll(elem, ".", "_")
+	wrapper := "ArrayOf_" + toProtoMessageName(clean)
+
+	// Register wrapper on-the-fly
+	if _, exists := g.pendingWrappers[wrapper]; !exists {
+		var wb strings.Builder
+		wb.WriteString(fmt.Sprintf("message %s {\n", wrapper))
+		wb.WriteString(fmt.Sprintf("  repeated %s items = 1;\n", elem))
+		wb.WriteString("}\n")
+		g.pendingWrappers[wrapper] = wb.String()
+	}
+
+	return fmt.Sprintf("    %s %s_list = %d;\n", wrapper, toProtoFieldName(clean), fieldNum), nil
 }
 
-// isKnownType checks if a type name is known (will be generated or is a scalar/well-known type).
-func (g *Codegen) isKnownType(name string) bool {
-	// Scalar types are always known
-	switch name {
-	case "string", "int32", "int64", "uint32", "uint64", "bool", "float", "double", "bytes":
-		return true
+func (g *Codegen) generateUnionMapField(item *model.Type, fieldNum int) (string, error) {
+	key, err := convertBaseType(item.Key.Name)
+	if err != nil {
+		key = "string"
+	}
+	val, err := g.convertType(item.Value.(*model.Type))
+	if err != nil {
+		return "", err
 	}
 
-	// Well-known proto types
-	if strings.HasPrefix(name, "google.protobuf.") {
-		return true
+	cleanKey := strings.ReplaceAll(key, ".", "_")
+	cleanVal := strings.ReplaceAll(val, ".", "_")
+	wrapper := fmt.Sprintf("MapOf_%s_%s", toProtoMessageName(cleanKey), toProtoMessageName(cleanVal))
+
+	// Register wrapper on-the-fly
+	if _, exists := g.pendingWrappers[wrapper]; !exists {
+		var wb strings.Builder
+		wb.WriteString(fmt.Sprintf("message %s {\n", wrapper))
+		wb.WriteString(fmt.Sprintf("  map<%s, %s> pairs = 1;\n", key, val))
+		wb.WriteString("}\n")
+		g.pendingWrappers[wrapper] = wb.String()
 	}
 
-	// Check knownTypes set
-	return g.knownTypes[name]
+	return fmt.Sprintf("    %s %s_map = %d;\n", wrapper, toProtoFieldName(cleanVal), fieldNum), nil
 }
 
+func (g *Codegen) generateUnionStandardField(item *model.Type, fieldNum int) (string, error) {
+	protoType, err := g.convertType(item)
+	if err != nil {
+		return "", err
+	}
+
+	var fieldName string
+	switch item.Kind {
+	case "base":
+		fieldName = item.Name + "_value"
+	case "reference":
+		fieldName = toProtoFieldName(item.Name)
+	default:
+		fieldName = "value"
+	}
+
+	return fmt.Sprintf("    %s %s = %d;\n", protoType, fieldName, fieldNum), nil
+}
+
+// generateHeader produces the proto file header.
 func (g *Codegen) generateHeader() string {
 	var b strings.Builder
 	b.WriteString("// Code generated by lspls. DO NOT EDIT.\n")
@@ -395,6 +375,7 @@ func (g *Codegen) generateEnum(e *model.Enumeration) string {
 	return b.String()
 }
 
+// convertType converts an LSP type to a proto3 type string.
 func (g *Codegen) convertType(t *model.Type) (string, error) {
 	if t == nil {
 		return "", fmt.Errorf("nil type")
@@ -406,10 +387,10 @@ func (g *Codegen) convertType(t *model.Type) (string, error) {
 
 	case "reference":
 		// Check if this is a type alias that maps to a proto type
-		protoType := g.resolveTypeAlias(t.Name)
+		protoType := g.resolver.Resolve(t.Name)
 
-		// Check if the resolved type is known (either a scalar, well-known type, or generated type)
-		if !g.isKnownType(protoType) && !g.isKnownType(t.Name) {
+		// Check if the resolved type is known
+		if !g.resolver.IsKnown(protoType) && !g.resolver.IsKnown(t.Name) {
 			return "", fmt.Errorf("references proposed type %q (use --proposed to include)", t.Name)
 		}
 
@@ -424,7 +405,6 @@ func (g *Codegen) convertType(t *model.Type) (string, error) {
 
 	case "map":
 		// Proto3 map keys must be scalar types (string, int32, etc.)
-		// Reference types (type aliases) are typically strings in LSP
 		var keyTypeStr string
 		switch t.Key.Kind {
 		case "base":
@@ -434,7 +414,7 @@ func (g *Codegen) convertType(t *model.Type) (string, error) {
 				return "", err
 			}
 		case "reference":
-			// Type aliases in LSP are typically strings (e.g., DocumentUri, ChangeAnnotationIdentifier)
+			// Type aliases in LSP are typically strings (e.g., DocumentUri)
 			keyTypeStr = "string"
 		default:
 			return "", fmt.Errorf("unsupported map key type: %s", t.Key.Kind)
@@ -446,9 +426,27 @@ func (g *Codegen) convertType(t *model.Type) (string, error) {
 		}
 
 		// Proto3 doesn't support map<K, repeated V>
-		// If value is an array, skip this field (would need wrapper message)
 		if valType.Kind == "array" {
-			return "", fmt.Errorf("map with array values not supported (would need wrapper message)")
+			// Generate wrapper for the array value
+			elemType, err := g.convertType(valType.Element)
+			if err != nil {
+				return "", err
+			}
+
+			// Naming convention: MapArray_{ElementType}
+			cleanType := strings.ReplaceAll(elemType, ".", "_")
+			wrapperName := "MapArray_" + toProtoMessageName(cleanType)
+
+			// Define wrapper message if not already present
+			if _, exists := g.pendingWrappers[wrapperName]; !exists {
+				var wb strings.Builder
+				wb.WriteString(fmt.Sprintf("message %s {\n", wrapperName))
+				wb.WriteString(fmt.Sprintf("  repeated %s items = 1;\n", elemType))
+				wb.WriteString("}\n")
+				g.pendingWrappers[wrapperName] = wb.String()
+			}
+
+			return fmt.Sprintf("map<%s, %s>", keyTypeStr, wrapperName), nil
 		}
 
 		valTypeStr, err := g.convertType(valType)
@@ -458,26 +456,48 @@ func (g *Codegen) convertType(t *model.Type) (string, error) {
 		return fmt.Sprintf("map<%s, %s>", keyTypeStr, valTypeStr), nil
 
 	case "or":
-		// Union types - for now, use google.protobuf.Any or first non-null type
+		// Union types: Try to find a compatible mapping
+		// 1. If any member is a reference, use it (assumes optional/oneof compatibility handled elsewhere or acceptable)
+		// 2. If all are scalars, use string or Value
+		// TODO: Implement proper OneOf support in future
 		for _, item := range t.Items {
-			if item.Kind != "base" || item.Name != "null" {
-				return g.convertType(item)
+			if item == nil {
+				continue
+			}
+			if item.Kind == "base" && item.Name == "null" {
+				continue
+			}
+
+			// Try to convert first valid option
+			res, err := g.convertType(item)
+			if err == nil {
+				return res, nil
 			}
 		}
-		return "", fmt.Errorf("union with only null types")
+		return "", fmt.Errorf("could not resolve union type to a single proto type")
 
-	case "literal":
-		// Inline struct - would need nested message
-		return "", fmt.Errorf("literal types require nested messages")
+	case "and":
+		// Intersection types - use first part
+		if len(t.Items) > 0 {
+			return g.convertType(t.Items[0])
+		}
+		return "", fmt.Errorf("empty intersection type")
 
 	case "stringLiteral":
 		return "string", nil
 
+	case "integerLiteral":
+		return "int32", nil
+
+	case "booleanLiteral":
+		return "bool", nil
+
 	case "tuple":
-		return "", fmt.Errorf("tuples not directly supported in proto3")
+		// Tuple becomes ListValue for now
+		return "google.protobuf.ListValue", nil
 
 	default:
-		return "", fmt.Errorf("unknown type kind: %s", t.Kind)
+		return "", fmt.Errorf("unsupported type kind: %s", t.Kind)
 	}
 }
 
