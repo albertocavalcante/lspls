@@ -9,8 +9,8 @@
 // Copyright 2022 The Go Authors. All rights reserved.
 // See NOTICE file for the full license text.
 
-// Package codegen generates Go source code from the LSP specification model.
-package codegen
+// Package golang generates Go source code from the LSP specification model.
+package golang
 
 import (
 	"bytes"

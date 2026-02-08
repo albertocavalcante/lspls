@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-package codegen_test
+package golang_test
 
 import (
 	"encoding/json"
@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/albertocavalcante/lspls/internal/codegen"
-	"github.com/albertocavalcante/lspls/model"
+	"github.com/albertocavalcante/lspls/generators/golang"
 	"github.com/albertocavalcante/lspls/internal/testutil"
+	"github.com/albertocavalcante/lspls/model"
 	"golang.org/x/tools/txtar"
 )
 
@@ -79,7 +79,7 @@ func runCodegen(input []byte, flags []string) (map[string][]byte, error) {
 	}
 
 	// Configure code generation
-	cfg := codegen.Config{
+	cfg := golang.Config{
 		PackageName:     "protocol",
 		ResolveDeps:     true, // Default to true to match CLI behavior
 		IncludeProposed: slices.Contains(flags, "proposed"),
@@ -101,7 +101,7 @@ func runCodegen(input []byte, flags []string) (map[string][]byte, error) {
 	}
 
 	// Generate
-	gen := codegen.New(&m, cfg)
+	gen := golang.New(&m, cfg)
 	out, err := gen.Generate()
 	if err != nil {
 		return nil, err

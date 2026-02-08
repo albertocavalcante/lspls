@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-package codegen
+package golang
 
 import (
 	"sort"

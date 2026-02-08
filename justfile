@@ -77,7 +77,7 @@ gen-inlayhint:
 
 # Update golden test files
 update-golden:
-    go test ./internal/codegen/... -update
+    go test ./generators/golang/... -update
     go test ./e2e/... -update
 
 # Run e2e tests only

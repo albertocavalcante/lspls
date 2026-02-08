@@ -31,8 +31,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/albertocavalcante/lspls/internal/codegen"
 	"github.com/albertocavalcante/lspls/fetch"
+	"github.com/albertocavalcante/lspls/generators/golang"
 )
 
 var (
@@ -150,7 +150,7 @@ Examples:
 	}
 
 	// Configure code generation
-	cfg := codegen.Config{
+	cfg := golang.Config{
 		PackageName:     *packageName,
 		ResolveDeps:     *resolveDeps,
 		IncludeProposed: *proposed,
@@ -171,7 +171,7 @@ Examples:
 	}
 
 	// Generate code
-	gen := codegen.New(result.Model, cfg)
+	gen := golang.New(result.Model, cfg)
 	out, err := gen.Generate()
 	if err != nil {
 		return fmt.Errorf("generate code: %w", err)
