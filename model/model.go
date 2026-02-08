@@ -296,7 +296,8 @@ func (t *Type) NonNullType() *Type {
 		return nil
 	}
 	for _, item := range t.Items {
-		if !(item.Kind == "base" && item.Name == "null") {
+		isNull := item.Kind == "base" && item.Name == "null"
+		if !isNull {
 			return item
 		}
 	}

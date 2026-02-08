@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "failed to create temp dir: %v\n", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	binary = filepath.Join(tmpDir, "lspls")
 	if err := buildBinary(binary); err != nil {
@@ -131,7 +131,7 @@ func runTestCase(t *testing.T, file, name string) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	t.Cleanup(func() { os.RemoveAll(tmpDir) })
+	t.Cleanup(func() { _ = os.RemoveAll(tmpDir) })
 
 	// Write input.json to temp directory.
 	inputPath := filepath.Join(tmpDir, "input.json")
