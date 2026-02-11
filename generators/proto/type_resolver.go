@@ -7,7 +7,6 @@
 package proto
 
 import (
-	"iter"
 	"strings"
 
 	"github.com/albertocavalcante/lspls/model"
@@ -134,15 +133,4 @@ func (r *TypeResolver) IsKnown(typeName string) bool {
 
 	// Check defined types set
 	return r.definedTypes[typeName]
-}
-
-// DefinedTypes returns an iterator over all defined types.
-func (r *TypeResolver) DefinedTypes() iter.Seq[string] {
-	return func(yield func(string) bool) {
-		for t := range r.definedTypes {
-			if !yield(t) {
-				return
-			}
-		}
-	}
 }

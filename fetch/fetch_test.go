@@ -411,18 +411,6 @@ func TestFetchFromFile(t *testing.T) {
 			if tt.wantSource != "" && !strings.HasPrefix(result.Source, tt.wantSource) {
 				t.Errorf("source = %q, want prefix %q", result.Source, tt.wantSource)
 			}
-			if tt.wantSource != "" && !strings.HasPrefix(result.Source, tt.wantSource) {
-				t.Errorf("source = %q, want prefix %q", result.Source, tt.wantSource)
-			}
-			if tt.wantSource != "" && !strings.HasPrefix(result.Source, tt.wantSource) {
-				t.Errorf("source = %q, want prefix %q", result.Source, tt.wantSource)
-			}
-			if tt.wantSource != "" && !strings.HasPrefix(result.Source, tt.wantSource) {
-				t.Errorf("source = %q, want prefix %q", result.Source, tt.wantSource)
-			}
-			if tt.wantSource != "" && !strings.HasPrefix(result.Source, tt.wantSource) {
-				t.Errorf("source = %q, want prefix %q", result.Source, tt.wantSource)
-			}
 
 			if tt.checkResult != nil {
 				tt.checkResult(t, result)
