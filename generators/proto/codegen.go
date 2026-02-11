@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"unicode"
 
+	"github.com/albertocavalcante/lspls/internal/lspbase"
 	"github.com/albertocavalcante/lspls/model"
 )
 
@@ -504,17 +504,17 @@ func (g *Codegen) convertType(t *model.Type) (string, error) {
 // convertBaseType converts an LSP base type to a proto3 type.
 func convertBaseType(name string) (string, error) {
 	switch name {
-	case "string", "DocumentUri", "URI":
+	case lspbase.TypeString, lspbase.TypeDocumentUri, lspbase.TypeURI:
 		return "string", nil
-	case "integer":
+	case lspbase.TypeInteger:
 		return "int32", nil
-	case "uinteger":
+	case lspbase.TypeUinteger:
 		return "uint32", nil
-	case "decimal":
+	case lspbase.TypeDecimal:
 		return "double", nil
-	case "boolean":
+	case lspbase.TypeBoolean:
 		return "bool", nil
-	case "null":
+	case lspbase.TypeNull:
 		return "", fmt.Errorf("null type cannot be represented in proto3")
 	default:
 		return "", fmt.Errorf("unknown base type: %s", name)
@@ -523,53 +523,18 @@ func convertBaseType(name string) (string, error) {
 
 // toProtoMessageName converts an LSP type name to a proto message name.
 func toProtoMessageName(name string) string {
-	// Strip leading $ if present
 	name = strings.TrimPrefix(name, "$")
-	if name == "" {
-		return name
-	}
-	// Ensure first letter is uppercase
-	return string(unicode.ToUpper(rune(name[0]))) + name[1:]
+	return lspbase.Capitalize(name)
 }
 
 // toProtoFieldName converts an LSP field name to a proto field name (snake_case).
 func toProtoFieldName(name string) string {
-	// Check if entire name is uppercase (like URI, ID)
-	allUpper := true
-	for _, r := range name {
-		if !unicode.IsUpper(r) && unicode.IsLetter(r) {
-			allUpper = false
-			break
-		}
-	}
-	if allUpper {
-		return strings.ToLower(name)
-	}
-
-	var result strings.Builder
-	for i, r := range name {
-		if unicode.IsUpper(r) {
-			if i > 0 {
-				result.WriteRune('_')
-			}
-			result.WriteRune(unicode.ToLower(r))
-		} else {
-			result.WriteRune(r)
-		}
-	}
-	return result.String()
+	return lspbase.CamelToSnake(name)
 }
 
 // toEnumPrefix converts an enum name to a SCREAMING_SNAKE_CASE prefix.
 func toEnumPrefix(name string) string {
-	var result strings.Builder
-	for i, r := range name {
-		if unicode.IsUpper(r) && i > 0 {
-			result.WriteRune('_')
-		}
-		result.WriteRune(unicode.ToUpper(r))
-	}
-	return result.String()
+	return lspbase.CamelToScreamingSnake(name)
 }
 
 // toEnumValueName creates a proto enum value name.

@@ -21,6 +21,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/albertocavalcante/lspls/internal/lspbase"
 	"github.com/albertocavalcante/lspls/model"
 )
 
@@ -154,17 +155,17 @@ func New(m *model.Model, cfg Config) *Generator {
 
 // buildProposedCache builds a cache of proposed type names for O(1) lookup.
 func buildProposedCache(m *model.Model) map[string]bool {
-	cache := make(map[string]bool)
+	var items []lspbase.NamedProposal
 	for _, s := range m.Structures {
-		cache[s.Name] = s.Proposed
+		items = append(items, lspbase.NamedProposal{Name: s.Name, Proposed: s.Proposed})
 	}
 	for _, e := range m.Enumerations {
-		cache[e.Name] = e.Proposed
+		items = append(items, lspbase.NamedProposal{Name: e.Name, Proposed: e.Proposed})
 	}
 	for _, a := range m.TypeAliases {
-		cache[a.Name] = a.Proposed
+		items = append(items, lspbase.NamedProposal{Name: a.Name, Proposed: a.Proposed})
 	}
-	return cache
+	return lspbase.ProposedTypes(items...)
 }
 
 // Generate produces all output files.
@@ -473,21 +474,17 @@ func (g *Generator) goBaseType(t *model.Type) string {
 		return "any"
 	}
 	switch t.Name {
-	case "string":
+	case lspbase.TypeString, lspbase.TypeURI, lspbase.TypeDocumentUri:
 		return "string"
-	case "integer":
+	case lspbase.TypeInteger:
 		return "int32"
-	case "uinteger":
+	case lspbase.TypeUinteger:
 		return "uint32"
-	case "decimal":
+	case lspbase.TypeDecimal:
 		return "float64"
-	case "boolean":
+	case lspbase.TypeBoolean:
 		return "bool"
-	case "null":
-		return "any"
-	case "URI", "DocumentUri":
-		return "string"
-	case "LSPAny":
+	case lspbase.TypeNull, lspbase.TypeLSPAny:
 		return "any"
 	default:
 		return "any"
@@ -657,17 +654,7 @@ func (g *Generator) generateOrType(buf *bytes.Buffer, info orTypeInfo) {
 // Helper functions
 
 func exportName(name string) string {
-	if name == "" {
-		return ""
-	}
-	// Handle names starting with underscore (internal types)
-	if name[0] == '_' {
-		return "X" + name[1:]
-	}
-	// Capitalize first letter
-	runes := []rune(name)
-	runes[0] = unicode.ToUpper(runes[0])
-	return string(runes)
+	return lspbase.ExportName(name)
 }
 
 func writeDocComment(buf *bytes.Buffer, doc string) {
