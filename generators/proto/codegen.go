@@ -529,7 +529,7 @@ func (g *Codegen) convertType(t *model.Type) (string, error) {
 // convertBaseType converts an LSP base type to a proto3 type.
 func convertBaseType(name string) (string, error) {
 	switch name {
-	case lspbase.TypeString, lspbase.TypeDocumentUri, lspbase.TypeURI:
+	case lspbase.TypeString, lspbase.TypeDocumentURI, lspbase.TypeURI:
 		return "string", nil
 	case lspbase.TypeInteger:
 		return "int32", nil

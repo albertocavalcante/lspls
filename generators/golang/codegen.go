@@ -153,7 +153,7 @@ func New(m *model.Model, cfg Config) *Generator {
 
 // buildProposedCache builds a cache of proposed type names for O(1) lookup.
 func buildProposedCache(m *model.Model) map[string]bool {
-	var items []lspbase.NamedProposal
+	items := make([]lspbase.NamedProposal, 0, len(m.Structures)+len(m.Enumerations)+len(m.TypeAliases))
 	for _, s := range m.Structures {
 		items = append(items, lspbase.NamedProposal{Name: s.Name, Proposed: s.Proposed})
 	}

@@ -185,7 +185,7 @@ func (g *Generator) goBaseType(t *model.Type) string {
 		return "any"
 	}
 	switch t.Name {
-	case lspbase.TypeString, lspbase.TypeURI, lspbase.TypeDocumentUri:
+	case lspbase.TypeString, lspbase.TypeURI, lspbase.TypeDocumentURI:
 		return "string"
 	case lspbase.TypeInteger:
 		return "int32"

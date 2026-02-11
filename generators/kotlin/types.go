@@ -83,7 +83,7 @@ func (g *Codegen) kotlinTypeInner(t *model.Type) string {
 // kotlinBaseType maps an LSP base type name to a Kotlin type.
 func kotlinBaseType(t *model.Type) string {
 	switch t.Name {
-	case lspbase.TypeString, lspbase.TypeURI, lspbase.TypeDocumentUri, lspbase.TypeRegExp:
+	case lspbase.TypeString, lspbase.TypeURI, lspbase.TypeDocumentURI, lspbase.TypeRegExp:
 		return "String"
 	case lspbase.TypeInteger:
 		return "Int"

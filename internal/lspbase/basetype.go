@@ -17,7 +17,7 @@ const (
 	TypeBoolean     = "boolean"
 	TypeNull        = "null"
 	TypeURI         = "URI"
-	TypeDocumentUri = "DocumentUri"
+	TypeDocumentURI = "DocumentUri"
 	TypeRegExp      = "RegExp"
 	TypeLSPAny      = "LSPAny"
 	TypeLSPObject   = "LSPObject"
@@ -33,7 +33,7 @@ var baseTypes = map[string]bool{
 	TypeBoolean:     true,
 	TypeNull:        true,
 	TypeURI:         true,
-	TypeDocumentUri: true,
+	TypeDocumentURI: true,
 	TypeRegExp:      true,
 	TypeLSPAny:      true,
 	TypeLSPObject:   true,
@@ -48,7 +48,7 @@ func IsBaseType(name string) bool {
 // IsStringLike reports whether the base type maps to a string in most targets.
 func IsStringLike(name string) bool {
 	switch name {
-	case TypeString, TypeURI, TypeDocumentUri, TypeRegExp:
+	case TypeString, TypeURI, TypeDocumentURI, TypeRegExp:
 		return true
 	}
 	return false
