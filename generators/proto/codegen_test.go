@@ -250,6 +250,17 @@ func runCodegen(input []byte, flags []string) (map[string][]byte, error) {
 		if pkgName, ok := strings.CutPrefix(f, "package="); ok {
 			cfg.PackageName = pkgName
 		}
+		if typesStr, ok := strings.CutPrefix(f, "types="); ok {
+			for _, t := range strings.Split(typesStr, ";") {
+				t = strings.TrimSpace(t)
+				if t != "" {
+					cfg.Types = append(cfg.Types, t)
+				}
+			}
+		}
+		if val, ok := strings.CutPrefix(f, "resolve-deps="); ok {
+			cfg.ResolveDeps = val == "true"
+		}
 	}
 
 	gen := New(&m, cfg)

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-package golang
+package generator
 
 import (
 	"sort"
@@ -9,22 +9,23 @@ import (
 	"github.com/albertocavalcante/lspls/model"
 )
 
-func TestResolveTransitiveDeps(t *testing.T) {
+func TestResolveDeps(t *testing.T) {
 	tests := []struct {
-		name   string
-		model  *model.Model
-		filter []string
-		want   []string // expected types after resolution
+		name            string
+		model           *model.Model
+		filter          map[string]bool
+		includeProposed bool
+		want            []string // expected types after resolution, nil means nil
 	}{
 		{
-			name: "no filter returns nil",
+			name: "nil filter returns nil",
 			model: &model.Model{
 				Structures: []*model.Structure{
 					{Name: "Position"},
 				},
 			},
 			filter: nil,
-			want:   nil, // nil means all types
+			want:   nil,
 		},
 		{
 			name: "struct referencing struct",
@@ -45,7 +46,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"Range"},
+			filter: map[string]bool{"Range": true},
 			want:   []string{"Position", "Range"},
 		},
 		{
@@ -72,7 +73,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"A"},
+			filter: map[string]bool{"A": true},
 			want:   []string{"A", "B", "C"},
 		},
 		{
@@ -93,7 +94,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"A"},
+			filter: map[string]bool{"A": true},
 			want:   []string{"A", "B"},
 		},
 		{
@@ -120,7 +121,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"Locations"},
+			filter: map[string]bool{"Locations": true},
 			want:   []string{"Locations", "Position"},
 		},
 		{
@@ -145,7 +146,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"InlayHint"},
+			filter: map[string]bool{"InlayHint": true},
 			want:   []string{"InlayHint", "InlayHintKind"},
 		},
 		{
@@ -166,7 +167,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"Document"},
+			filter: map[string]bool{"Document": true},
 			want:   []string{"Document", "DocumentUri"},
 		},
 		{
@@ -183,7 +184,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"OuterAlias"},
+			filter: map[string]bool{"OuterAlias": true},
 			want:   []string{"InnerAlias", "OuterAlias"},
 		},
 		{
@@ -219,7 +220,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"Location"},
+			filter: map[string]bool{"Location": true},
 			want:   []string{"Location", "Position", "Range"},
 		},
 		{
@@ -247,7 +248,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"PositionMap"},
+			filter: map[string]bool{"PositionMap": true},
 			want:   []string{"Position", "PositionMap"},
 		},
 		{
@@ -276,7 +277,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"Child"},
+			filter: map[string]bool{"Child": true},
 			want:   []string{"Base", "Child", "Mixin"},
 		},
 		{
@@ -291,7 +292,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"Simple"},
+			filter: map[string]bool{"Simple": true},
 			want:   []string{"Simple"},
 		},
 		{
@@ -318,7 +319,7 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"A", "C"},
+			filter: map[string]bool{"A": true, "C": true},
 			want:   []string{"A", "B", "C"},
 		},
 		{
@@ -333,31 +334,82 @@ func TestResolveTransitiveDeps(t *testing.T) {
 					},
 				},
 			},
-			filter: []string{"Container"},
+			filter: map[string]bool{"Container": true},
 			want:   []string{"Container", "Unknown"},
+		},
+		{
+			name: "proposed property skipped when includeProposed is false",
+			model: &model.Model{
+				Structures: []*model.Structure{
+					{
+						Name: "Host",
+						Properties: []model.Property{
+							{Name: "stable", Type: &model.Type{Kind: "reference", Name: "StableDep"}},
+							{Name: "experimental", Proposed: true, Type: &model.Type{Kind: "reference", Name: "ProposedDep"}},
+						},
+					},
+					{
+						Name: "StableDep",
+						Properties: []model.Property{
+							{Name: "v", Type: &model.Type{Kind: "base", Name: "string"}},
+						},
+					},
+					{
+						Name: "ProposedDep",
+						Properties: []model.Property{
+							{Name: "v", Type: &model.Type{Kind: "base", Name: "string"}},
+						},
+					},
+				},
+			},
+			filter:          map[string]bool{"Host": true},
+			includeProposed: false,
+			want:            []string{"Host", "StableDep"},
+		},
+		{
+			name: "proposed property included when includeProposed is true",
+			model: &model.Model{
+				Structures: []*model.Structure{
+					{
+						Name: "Host",
+						Properties: []model.Property{
+							{Name: "stable", Type: &model.Type{Kind: "reference", Name: "StableDep"}},
+							{Name: "experimental", Proposed: true, Type: &model.Type{Kind: "reference", Name: "ProposedDep"}},
+						},
+					},
+					{
+						Name: "StableDep",
+						Properties: []model.Property{
+							{Name: "v", Type: &model.Type{Kind: "base", Name: "string"}},
+						},
+					},
+					{
+						Name: "ProposedDep",
+						Properties: []model.Property{
+							{Name: "v", Type: &model.Type{Kind: "base", Name: "string"}},
+						},
+					},
+				},
+			},
+			filter:          map[string]bool{"Host": true},
+			includeProposed: true,
+			want:            []string{"Host", "ProposedDep", "StableDep"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := DefaultConfig()
-			cfg.Types = tt.filter
-			cfg.ResolveDeps = true
+			got := ResolveDeps(tt.model, tt.filter, tt.includeProposed)
 
-			g := New(tt.model, cfg)
-
-			// Call the resolution method
-			g.resolveTransitiveDeps()
-
-			// Extract the result
-			var got []string
-			if g.typeFilter == nil {
-				got = nil
+			// Extract result
+			var gotSlice []string
+			if got == nil {
+				gotSlice = nil
 			} else {
-				for name := range g.typeFilter {
-					got = append(got, name)
+				for name := range got {
+					gotSlice = append(gotSlice, name)
 				}
-				sort.Strings(got)
+				sort.Strings(gotSlice)
 			}
 
 			// Sort want for comparison
@@ -368,54 +420,17 @@ func TestResolveTransitiveDeps(t *testing.T) {
 				sort.Strings(want)
 			}
 
-			if len(got) != len(want) {
-				t.Errorf("got %d types, want %d types\ngot:  %v\nwant: %v", len(got), len(want), got, want)
+			if len(gotSlice) != len(want) {
+				t.Errorf("got %d types, want %d types\ngot:  %v\nwant: %v", len(gotSlice), len(want), gotSlice, want)
 				return
 			}
 
-			for i := range got {
-				if got[i] != want[i] {
-					t.Errorf("type mismatch at index %d\ngot:  %v\nwant: %v", i, got, want)
+			for i := range gotSlice {
+				if gotSlice[i] != want[i] {
+					t.Errorf("type mismatch at index %d\ngot:  %v\nwant: %v", i, gotSlice, want)
 					return
 				}
 			}
 		})
-	}
-}
-
-func TestResolveTransitiveDepsDisabled(t *testing.T) {
-	m := &model.Model{
-		Structures: []*model.Structure{
-			{
-				Name: "Position",
-				Properties: []model.Property{
-					{Name: "line", Type: &model.Type{Kind: "base", Name: "uinteger"}},
-				},
-			},
-			{
-				Name: "Range",
-				Properties: []model.Property{
-					{Name: "start", Type: &model.Type{Kind: "reference", Name: "Position"}},
-				},
-			},
-		},
-	}
-
-	cfg := DefaultConfig()
-	cfg.Types = []string{"Range"}
-	cfg.ResolveDeps = false
-
-	g := New(m, cfg)
-	g.resolveTransitiveDeps()
-
-	// With ResolveDeps=false, filter should remain unchanged
-	if len(g.typeFilter) != 1 {
-		t.Errorf("expected 1 type in filter, got %d", len(g.typeFilter))
-	}
-	if !g.typeFilter["Range"] {
-		t.Error("expected Range in filter")
-	}
-	if g.typeFilter["Position"] {
-		t.Error("Position should not be in filter when ResolveDeps=false")
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/albertocavalcante/lspls/generator"
 	"github.com/albertocavalcante/lspls/internal/lspbase"
 	"github.com/albertocavalcante/lspls/model"
 )
@@ -21,17 +22,25 @@ type Codegen struct {
 	model           *model.Model
 	config          Config
 	resolver        *TypeResolver
+	typeFilter      map[string]bool   // nil = all types
 	pendingWrappers map[string]string // Helper messages generated on-the-fly (name -> definition)
 }
 
 // New creates a new proto Codegen.
 func New(m *model.Model, cfg Config) *Codegen {
-	return &Codegen{
+	c := &Codegen{
 		model:           m,
 		config:          cfg,
 		resolver:        NewTypeResolver(m, cfg.IncludeProposed, cfg.TypeOverrides),
 		pendingWrappers: make(map[string]string),
 	}
+	if len(cfg.Types) > 0 {
+		c.typeFilter = make(map[string]bool)
+		for _, t := range cfg.Types {
+			c.typeFilter[t] = true
+		}
+	}
+	return c
 }
 
 // Output contains the generated proto content.
@@ -39,8 +48,24 @@ type Output struct {
 	Proto []byte
 }
 
+// shouldInclude returns whether a type should be included in generation output.
+func (g *Codegen) shouldInclude(name string, proposed bool) bool {
+	if proposed && !g.config.IncludeProposed {
+		return false
+	}
+	if g.typeFilter != nil && !g.typeFilter[name] {
+		return false
+	}
+	return true
+}
+
 // Generate produces the proto3 definitions.
 func (g *Codegen) Generate() (*Output, error) {
+	// Resolve transitive dependencies if filtering
+	if g.typeFilter != nil && g.config.ResolveDeps {
+		g.typeFilter = generator.ResolveDeps(g.model, g.typeFilter, g.config.IncludeProposed)
+	}
+
 	var b strings.Builder
 
 	// Header
@@ -64,7 +89,7 @@ func (g *Codegen) Generate() (*Output, error) {
 	b.WriteString("// Type Aliases\n")
 	b.WriteString("// The following type aliases from LSP are mapped to proto3 types:\n")
 	for _, alias := range g.model.TypeAliases {
-		if !g.config.IncludeProposed && alias.Proposed {
+		if !g.shouldInclude(alias.Name, alias.Proposed) {
 			continue
 		}
 		// Add comment explaining the mapping
@@ -75,7 +100,7 @@ func (g *Codegen) Generate() (*Output, error) {
 
 	// Generate enums first (dependencies)
 	for _, enum := range g.model.Enumerations {
-		if !g.config.IncludeProposed && enum.Proposed {
+		if !g.shouldInclude(enum.Name, enum.Proposed) {
 			continue
 		}
 		b.WriteString(g.generateEnum(enum))
@@ -84,7 +109,7 @@ func (g *Codegen) Generate() (*Output, error) {
 
 	// Generate messages
 	for _, structure := range g.model.Structures {
-		if !g.config.IncludeProposed && structure.Proposed {
+		if !g.shouldInclude(structure.Name, structure.Proposed) {
 			continue
 		}
 		b.WriteString(g.generateMessage(structure))
@@ -93,7 +118,7 @@ func (g *Codegen) Generate() (*Output, error) {
 
 	// Generate union types (oneof)
 	for _, alias := range g.model.TypeAliases {
-		if !g.config.IncludeProposed && alias.Proposed {
+		if !g.shouldInclude(alias.Name, alias.Proposed) {
 			continue
 		}
 		if alias.Type != nil && alias.Type.Kind == "or" {

@@ -21,6 +21,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/albertocavalcante/lspls/generator"
 	"github.com/albertocavalcante/lspls/internal/lspbase"
 	"github.com/albertocavalcante/lspls/model"
 )
@@ -171,7 +172,9 @@ func buildProposedCache(m *model.Model) map[string]bool {
 // Generate produces all output files.
 func (g *Generator) Generate() (*Output, error) {
 	// Resolve transitive dependencies if filtering
-	g.resolveTransitiveDeps()
+	if g.typeFilter != nil && g.config.ResolveDeps {
+		g.typeFilter = generator.ResolveDeps(g.model, g.typeFilter, g.config.IncludeProposed)
+	}
 
 	// Process all structures
 	for _, s := range g.model.Structures {
@@ -870,98 +873,6 @@ func (g *Generator) generateInterfaces() string {
 	}
 
 	return buf.String()
-}
-
-// resolveTransitiveDeps expands the type filter to include all referenced types.
-// This ensures that when filtering for a type like "Range", all types it depends
-// on (like "Position") are also included in the generated output.
-func (g *Generator) resolveTransitiveDeps() {
-	if g.typeFilter == nil || !g.config.ResolveDeps {
-		return
-	}
-
-	expanded := make(map[string]bool)
-	for name := range g.typeFilter {
-		g.collectDeps(name, expanded)
-	}
-	g.typeFilter = expanded
-}
-
-// collectDeps recursively collects all types referenced by typeName.
-func (g *Generator) collectDeps(typeName string, visited map[string]bool) {
-	if visited[typeName] {
-		return // Already processed or cycle
-	}
-	visited[typeName] = true
-
-	// Check structures
-	for _, s := range g.model.Structures {
-		if s.Name == typeName {
-			for _, prop := range s.Properties {
-				// Skip proposed properties when not including proposed types
-				if prop.Proposed && !g.config.IncludeProposed {
-					continue
-				}
-				g.collectTypeRefs(prop.Type, visited)
-			}
-			// Also check extends and mixins
-			for _, ext := range s.Extends {
-				g.collectTypeRefs(ext, visited)
-			}
-			for _, mix := range s.Mixins {
-				g.collectTypeRefs(mix, visited)
-			}
-			return
-		}
-	}
-
-	// Check type aliases
-	for _, a := range g.model.TypeAliases {
-		if a.Name == typeName {
-			g.collectTypeRefs(a.Type, visited)
-			return
-		}
-	}
-
-	// Enums don't reference other types, nothing to do
-}
-
-// collectTypeRefs extracts type references from a Type and recursively
-// collects their dependencies.
-func (g *Generator) collectTypeRefs(t *model.Type, visited map[string]bool) {
-	if t == nil {
-		return
-	}
-	switch t.Kind {
-	case "reference":
-		g.collectDeps(t.Name, visited)
-	case "array":
-		g.collectTypeRefs(t.Element, visited)
-	case "map":
-		g.collectTypeRefs(t.Key, visited)
-		if vt, ok := t.Value.(*model.Type); ok {
-			g.collectTypeRefs(vt, visited)
-		}
-	case "or":
-		for _, item := range t.Items {
-			g.collectTypeRefs(item, visited)
-		}
-	case "and":
-		for _, item := range t.Items {
-			g.collectTypeRefs(item, visited)
-		}
-	case "tuple":
-		for _, item := range t.Items {
-			g.collectTypeRefs(item, visited)
-		}
-	case "literal":
-		// Literal types have inline properties
-		if lit, ok := t.Value.(model.Literal); ok {
-			for _, prop := range lit.Properties {
-				g.collectTypeRefs(prop.Type, visited)
-			}
-		}
-	}
 }
 
 // orderedMap maintains insertion order for deterministic output.
