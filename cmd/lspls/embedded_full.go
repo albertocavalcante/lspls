@@ -11,6 +11,7 @@ package main
 import (
 	"github.com/albertocavalcante/lspls/generator"
 	"github.com/albertocavalcante/lspls/generators/golang"
+	"github.com/albertocavalcante/lspls/generators/groovy"
 	"github.com/albertocavalcante/lspls/generators/kotlin"
 	"github.com/albertocavalcante/lspls/generators/proto"
 )
@@ -20,6 +21,7 @@ func init() {
 	generator.Register(golang.NewGenerator())
 	generator.Register(proto.NewGenerator())
 	generator.Register(kotlin.NewGenerator())
+	generator.Register(groovy.NewGenerator())
 	// Future generators:
 	// generator.Register(thrift.NewGenerator())
 }

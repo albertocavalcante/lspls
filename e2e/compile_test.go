@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -224,6 +225,233 @@ lint:
 		}
 		t.Logf("protoc: %v", time.Since(start))
 	})
+}
+
+// TestGroovyOutputCompiles verifies that generated Groovy code compiles and
+// passes Jackson serialization smoke tests via Gradle.
+func TestGroovyOutputCompiles(t *testing.T) {
+	if _, err := exec.LookPath("gradle"); err != nil {
+		t.Skip("gradle not installed")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	moduleRoot, err := findModuleRoot()
+	if err != nil {
+		t.Fatalf("find module root: %v", err)
+	}
+
+	tmpDir := t.TempDir()
+
+	// Build lspls binary with full generators
+	binaryPath := filepath.Join(tmpDir, "lspls")
+	if err := buildBinaryFull(ctx, moduleRoot, binaryPath); err != nil {
+		t.Fatalf("build binary: %v", err)
+	}
+
+	// Set up a Gradle project in the temp directory by copying the example scaffolding
+	exampleDir := filepath.Join(moduleRoot, "examples", "groovy-lsp")
+	for _, name := range []string{"build.gradle", "settings.gradle"} {
+		data, err := os.ReadFile(filepath.Join(exampleDir, name))
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, name), data, 0644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+
+	// Create source directories
+	srcDir := filepath.Join(tmpDir, "src", "main", "groovy", "lsp", "protocol")
+	testDir := filepath.Join(tmpDir, "src", "test", "groovy", "lsp", "protocol")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	if err := os.MkdirAll(testDir, 0755); err != nil {
+		t.Fatalf("mkdir test: %v", err)
+	}
+
+	// Generate Groovy code for a subset of types
+	types := "Position,Range,TextEdit,TextDocumentIdentifier,DiagnosticSeverity,MarkupKind"
+	outputFile := filepath.Join(srcDir, "Protocol.groovy")
+
+	cmd := exec.CommandContext(ctx, binaryPath,
+		"--target=groovy",
+		"-t", types,
+		"-p", "lsp.protocol",
+		"-o", outputFile,
+	)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("lspls generate groovy: %v\n%s", err, stderr.String())
+	}
+
+	// Copy the smoke test from the example
+	testSrc := filepath.Join(exampleDir, "src", "test", "groovy", "lsp", "protocol", "ProtocolSmokeTest.groovy")
+	testData, err := os.ReadFile(testSrc)
+	if err != nil {
+		t.Fatalf("read smoke test: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(testDir, "ProtocolSmokeTest.groovy"), testData, 0644); err != nil {
+		t.Fatalf("write smoke test: %v", err)
+	}
+
+	// Run gradle test
+	t.Run("gradle_test", func(t *testing.T) {
+		start := time.Now()
+		cmd := exec.CommandContext(ctx, "gradle", "test", "--no-daemon")
+		cmd.Dir = tmpDir
+		// Ensure JAVA_HOME is set — some environments (e.g. sdkman)
+		// only set it inside interactive shells.
+		env := ensureJavaHome(os.Environ())
+		// Ensure GRADLE_USER_HOME points to the default cache so the temp
+		// project reuses already-downloaded dependencies instead of
+		// downloading everything from scratch (which would exceed the timeout).
+		env = ensureGradleHome(env)
+		cmd.Env = env
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Logf("gradle output:\n%s", output)
+			t.Fatalf("gradle test failed: %v", err)
+		}
+		t.Logf("gradle test: %v", time.Since(start))
+	})
+}
+
+// ensureJavaHome returns env with a valid JAVA_HOME. If the existing value
+// points to a valid JDK directory it is kept. Otherwise JAVA_HOME is resolved
+// from well-known locations (sdkman, Homebrew, Gradle-provisioned JDKs).
+func ensureJavaHome(env []string) []string {
+	// Check if existing JAVA_HOME is valid (must have bin/java AND lib or release file).
+	for _, e := range env {
+		if len(e) > 10 && e[:10] == "JAVA_HOME=" {
+			if isValidJDK(e[10:]) {
+				return env
+			}
+		}
+	}
+
+	// Try well-known JDK locations in order of preference.
+	home := findJDKHome()
+	if home == "" {
+		return env
+	}
+
+	// Replace any existing invalid JAVA_HOME entry.
+	replaced := false
+	for i, e := range env {
+		if len(e) > 10 && e[:10] == "JAVA_HOME=" {
+			env[i] = "JAVA_HOME=" + home
+			replaced = true
+		}
+	}
+	if !replaced {
+		env = append(env, "JAVA_HOME="+home)
+	}
+	return env
+}
+
+// isValidJDK checks that a directory looks like a real JDK (not the macOS stub).
+func isValidJDK(home string) bool {
+	info, err := os.Stat(filepath.Join(home, "bin", "java"))
+	if err != nil || info.IsDir() {
+		return false
+	}
+	// The macOS /usr/bin/java stub lives at /usr — reject /usr as JAVA_HOME.
+	if home == "/usr" || home == "/usr/" {
+		return false
+	}
+	// A real JDK has a "release" file or "lib" directory.
+	if _, err := os.Stat(filepath.Join(home, "release")); err == nil {
+		return true
+	}
+	if info, err := os.Stat(filepath.Join(home, "lib")); err == nil && info.IsDir() {
+		return true
+	}
+	return false
+}
+
+// findJDKHome searches well-known locations for a JDK.
+func findJDKHome() string {
+	homeDir, _ := os.UserHomeDir()
+
+	candidates := []string{}
+
+	// sdkman (Homebrew or ~/.sdkman)
+	for _, sdkBase := range []string{
+		"/opt/homebrew/opt/sdkman-cli/libexec",
+		filepath.Join(homeDir, ".sdkman"),
+	} {
+		current := filepath.Join(sdkBase, "candidates", "java", "current")
+		if isValidJDK(current) {
+			return current
+		}
+	}
+
+	// Gradle-provisioned JDKs (~/.gradle/jdks/*)
+	gradleJDKs := filepath.Join(homeDir, ".gradle", "jdks")
+	if entries, err := os.ReadDir(gradleJDKs); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			candidate := filepath.Join(gradleJDKs, e.Name())
+			if isValidJDK(candidate) {
+				candidates = append(candidates, candidate)
+			}
+		}
+	}
+
+	// Homebrew openjdk
+	brewJDK := "/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home"
+	if isValidJDK(brewJDK) {
+		candidates = append(candidates, brewJDK)
+	}
+
+	// java_home utility (macOS)
+	if out, err := exec.Command("/usr/libexec/java_home").Output(); err == nil {
+		jh := strings.TrimSpace(string(out))
+		if isValidJDK(jh) {
+			candidates = append(candidates, jh)
+		}
+	}
+
+	// Resolve from java in PATH (follow real symlinks, skip macOS stub).
+	if javaPath, err := exec.LookPath("java"); err == nil {
+		if real, err := filepath.EvalSymlinks(javaPath); err == nil {
+			home := filepath.Dir(filepath.Dir(real))
+			if isValidJDK(home) {
+				candidates = append(candidates, home)
+			}
+		}
+	}
+
+	if len(candidates) > 0 {
+		return candidates[0]
+	}
+	return ""
+}
+
+// ensureGradleHome ensures GRADLE_USER_HOME is set in env. When running in a
+// temp directory, Gradle may not inherit the default cache location, causing it
+// to re-download all dependencies. This sets it to ~/.gradle if not already set.
+func ensureGradleHome(env []string) []string {
+	for _, e := range env {
+		if len(e) > 16 && e[:16] == "GRADLE_USER_HOME" {
+			return env // already set
+		}
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return env
+	}
+	gradleHome := filepath.Join(home, ".gradle")
+	if info, err := os.Stat(gradleHome); err == nil && info.IsDir() {
+		env = append(env, "GRADLE_USER_HOME="+gradleHome)
+	}
+	return env
 }
 
 // buildBinaryFull builds lspls with lspls_full tag.
