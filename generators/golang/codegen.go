@@ -49,6 +49,10 @@ type Config struct {
 	// GenerateJSON generates custom JSON marshaling code.
 	GenerateJSON bool
 
+	// SplitFiles emits separate files for server, client, and JSON types.
+	// When false (default), everything goes into Protocol for backward compat.
+	SplitFiles bool
+
 	// Source describes where the spec came from (for header comment).
 	Source string
 
@@ -208,10 +212,34 @@ func (g *Generator) Generate() (*Output, error) {
 	out := &Output{}
 	var err error
 
-	// Generate protocol.go
-	out.Protocol, err = g.generateProtocolFile()
-	if err != nil {
-		return nil, fmt.Errorf("generate protocol: %w", err)
+	if g.config.SplitFiles {
+		out.Protocol, err = g.generateTypesFile()
+		if err != nil {
+			return nil, fmt.Errorf("generate protocol: %w", err)
+		}
+		if len(g.serverMethods.keys()) > 0 {
+			out.Server, err = g.generateServerFile()
+			if err != nil {
+				return nil, fmt.Errorf("generate server: %w", err)
+			}
+		}
+		if len(g.clientMethods.keys()) > 0 {
+			out.Client, err = g.generateClientFile()
+			if err != nil {
+				return nil, fmt.Errorf("generate client: %w", err)
+			}
+		}
+		if len(g.orTypes.keys()) > 0 {
+			out.JSON, err = g.generateJSONFile()
+			if err != nil {
+				return nil, fmt.Errorf("generate json: %w", err)
+			}
+		}
+	} else {
+		out.Protocol, err = g.generateCombinedFile()
+		if err != nil {
+			return nil, fmt.Errorf("generate protocol: %w", err)
+		}
 	}
 
 	return out, nil
@@ -232,18 +260,17 @@ func (g *Generator) isProposed(name string) bool {
 	return g.proposedTypes[name]
 }
 
-func (g *Generator) generateProtocolFile() ([]byte, error) {
+// generateCombinedFile produces a single file with types, unions, constants,
+// and interfaces. This is the default (SplitFiles=false) mode.
+func (g *Generator) generateCombinedFile() ([]byte, error) {
 	var buf bytes.Buffer
 
-	// Header
 	buf.WriteString(g.fileHeader())
 	buf.WriteString("package " + g.config.PackageName + "\n\n")
 
-	// Determine which imports are needed
 	hasOrTypes := len(g.orTypes.keys()) > 0
 	hasInterfaces := len(g.serverMethods.keys()) > 0 || len(g.clientMethods.keys()) > 0
 
-	// Generate imports
 	if hasOrTypes || hasInterfaces {
 		buf.WriteString("import (\n")
 		if hasInterfaces {
@@ -259,15 +286,82 @@ func (g *Generator) generateProtocolFile() ([]byte, error) {
 		buf.WriteString("var _ = json.RawMessage{} // suppress unused import\n\n")
 	}
 
-	// Types
+	g.writeTypes(&buf)
+	buf.WriteString(g.generateOrTypes())
+	g.writeConsts(&buf)
+	buf.WriteString(g.generateInterfaces())
+
+	return format.Source(buf.Bytes())
+}
+
+// generateTypesFile produces protocol.go: types, enums, and constants only.
+func (g *Generator) generateTypesFile() ([]byte, error) {
+	var buf bytes.Buffer
+
+	buf.WriteString(g.fileHeader())
+	buf.WriteString("package " + g.config.PackageName + "\n\n")
+	buf.WriteString("import \"encoding/json\"\n\n")
+	buf.WriteString("var _ = json.RawMessage{} // suppress unused import\n\n")
+
+	g.writeTypes(&buf)
+	g.writeConsts(&buf)
+
+	return format.Source(buf.Bytes())
+}
+
+// generateServerFile produces server.go: method constants and Server interface.
+func (g *Generator) generateServerFile() ([]byte, error) {
+	var buf bytes.Buffer
+
+	buf.WriteString(g.fileHeader())
+	buf.WriteString("package " + g.config.PackageName + "\n\n")
+	buf.WriteString("import \"context\"\n\n")
+
+	buf.WriteString(g.generateMethodConstants())
+	buf.WriteString(g.generateInterface("Server", g.serverMethods))
+
+	return format.Source(buf.Bytes())
+}
+
+// generateClientFile produces client.go: method constants and Client interface.
+func (g *Generator) generateClientFile() ([]byte, error) {
+	var buf bytes.Buffer
+
+	buf.WriteString(g.fileHeader())
+	buf.WriteString("package " + g.config.PackageName + "\n\n")
+	buf.WriteString("import \"context\"\n\n")
+
+	buf.WriteString(g.generateMethodConstants())
+	buf.WriteString(g.generateInterface("Client", g.clientMethods))
+
+	return format.Source(buf.Bytes())
+}
+
+// generateJSONFile produces json.go: Or_* union types with JSON marshal/unmarshal.
+func (g *Generator) generateJSONFile() ([]byte, error) {
+	var buf bytes.Buffer
+
+	buf.WriteString(g.fileHeader())
+	buf.WriteString("package " + g.config.PackageName + "\n\n")
+	buf.WriteString("import (\n")
+	buf.WriteString("\t\"encoding/json\"\n")
+	buf.WriteString("\t\"fmt\"\n")
+	buf.WriteString(")\n\n")
+
+	buf.WriteString(g.generateOrTypes())
+
+	return format.Source(buf.Bytes())
+}
+
+// writeTypes writes all type definitions to buf.
+func (g *Generator) writeTypes(buf *bytes.Buffer) {
 	for _, name := range g.types.keys() {
 		buf.WriteString(g.types.get(name))
 	}
+}
 
-	// Or_* union types
-	buf.WriteString(g.generateOrTypes())
-
-	// Constants (enum values)
+// writeConsts writes all constant definitions to buf.
+func (g *Generator) writeConsts(buf *bytes.Buffer) {
 	if len(g.consts.keys()) > 0 {
 		buf.WriteString("const (\n")
 		for _, name := range g.consts.keys() {
@@ -276,11 +370,6 @@ func (g *Generator) generateProtocolFile() ([]byte, error) {
 		}
 		buf.WriteString(")\n\n")
 	}
-
-	// Interfaces (method constants, Server, Client)
-	buf.WriteString(g.generateInterfaces())
-
-	return format.Source(buf.Bytes())
 }
 
 func (g *Generator) fileHeader() string {

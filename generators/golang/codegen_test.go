@@ -85,6 +85,7 @@ func runCodegen(input []byte, flags []string) (map[string][]byte, error) {
 		IncludeProposed: slices.Contains(flags, "proposed"),
 		GenerateServer:  slices.Contains(flags, "server"),
 		GenerateClient:  slices.Contains(flags, "client"),
+		SplitFiles:      slices.Contains(flags, "split-files"),
 	}
 
 	// Parse type filter from flags
@@ -110,9 +111,16 @@ func runCodegen(input []byte, flags []string) (map[string][]byte, error) {
 	result := make(map[string][]byte)
 
 	// Strip variable header info for comparison
-	// The header contains Source, Ref, Commit, LSP Version which vary
-	protocol := stripGeneratedHeader(out.Protocol)
-	result["protocol.go"] = protocol
+	result["protocol.go"] = stripGeneratedHeader(out.Protocol)
+	if out.Server != nil {
+		result["server.go"] = stripGeneratedHeader(out.Server)
+	}
+	if out.Client != nil {
+		result["client.go"] = stripGeneratedHeader(out.Client)
+	}
+	if out.JSON != nil {
+		result["json.go"] = stripGeneratedHeader(out.JSON)
+	}
 
 	return result, nil
 }

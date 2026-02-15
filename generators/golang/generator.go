@@ -49,6 +49,11 @@ func (g *GoGenerator) Generate(ctx context.Context, m *model.Model, cfg generato
 		LSPVersion:      cfg.LSPVersion,
 	}
 
+	// Enable split files when writing to a directory
+	if cfg.OutputDir != "" {
+		internalCfg.SplitFiles = true
+	}
+
 	// Create internal generator and generate
 	gen := New(m, internalCfg)
 	out, err := gen.Generate()
@@ -59,12 +64,21 @@ func (g *GoGenerator) Generate(ctx context.Context, m *model.Model, cfg generato
 	// Convert to generator.Output
 	result := generator.NewOutput()
 
-	// Determine output filename
+	// Determine output filename for protocol types
 	filename := "protocol.go"
 	if cfg.OutputFile != "" {
 		filename = cfg.OutputFile
 	}
 
 	result.Add(filename, out.Protocol)
+	if out.Server != nil {
+		result.Add("server.go", out.Server)
+	}
+	if out.Client != nil {
+		result.Add("client.go", out.Client)
+	}
+	if out.JSON != nil {
+		result.Add("json.go", out.JSON)
+	}
 	return result, nil
 }
